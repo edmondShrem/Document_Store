@@ -12,7 +12,7 @@ public class DocumentImplTest{
     DocumentImpl d;
     @BeforeEach
     void beforeEach() throws URISyntaxException {
-        d = new DocumentImpl(new URI("file:///foo/bar"), "hello");
+        d = new DocumentImpl(new URI("file:///cheese/grapeSoda"), "hello");
     }
     @Test
     void constructorTXTTestEXP()  {
