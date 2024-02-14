@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -19,28 +20,17 @@ public class DocumentStoreImplTest {
     void beforeEach(){
         ds = new DocumentStoreImpl();
         //might need to make this a byte[] input stream? זה אזה כמות
-        i = new InputStream() {
-            @Override
-            public int read() throws IOException {
-                return 0;
-            }
-
-            @Override
-            public byte[] readAllBytes() throws IOException {
-                return "shamalamadingdong".getBytes();
-            }
-        };
+        i = new ByteArrayInputStream("shamalamadingdong".getBytes());
     }
     @AfterEach
     void afterEach() throws IOException {
         i.close();
     }
-    @Test
-    void badInputGetMDTest(){
-        assertThrows(IllegalArgumentException.class, () -> {
-            
-        });
-    }
+   @Test
+   void badInputSetMDTest(){
+
+   }
+
     @Test
     void putBadTest(){
         assertThrows(IllegalArgumentException.class, () -> {
@@ -63,10 +53,12 @@ public class DocumentStoreImplTest {
     @Test
     void putAndGetTest() throws URISyntaxException, IOException {
         assertEquals(ds.put(i, new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT), 0);
+        i = new ByteArrayInputStream("shamalamadingdong".getBytes());
         ds.put(i, new URI("file:///squid/grapeSoda"), DocumentStore.DocumentFormat.BINARY);
         assertEquals(ds.get(new URI("file:///cheese/grapeSoda")).getDocumentTxt(), "shamalamadingdong");
         assertArrayEquals(ds.get(new URI("file:///squid/grapeSoda")).getDocumentBinaryData(), "shamalamadingdong".getBytes());
     }
+
 
 }
 
