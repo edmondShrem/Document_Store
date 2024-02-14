@@ -82,9 +82,9 @@ public class DocumentImplTest{
     @Test
     void basicGettersTest() throws URISyntaxException {
         assertEquals(d.getDocumentTxt(), "hello");
-        assertEquals(d.getKey(), new URI("file:///foo/bar"));
+        assertEquals(d.getKey(), new URI("file:///cheese/grapeSoda"));
         assertNull(d.getDocumentBinaryData());
-        DocumentImpl ce = new DocumentImpl(new URI("file:///foo/bar"), "hello");
+        DocumentImpl ce = new DocumentImpl(new URI("file:///cheese/grapeSoda"), "hello");
         assertTrue(d.equals(ce));
     }
 }
