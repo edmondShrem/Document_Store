@@ -40,7 +40,7 @@ public class DocumentStoreImplTest {
             ds.put(i, null, DocumentStore.DocumentFormat.TXT);
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            ds.put(i, new URI("bruhmoment://192.0.2.16:80"), DocumentStore.DocumentFormat.BINARY);
+            ds.put(i, new URI("https://192.0.2.16:80"), DocumentStore.DocumentFormat.BINARY);
         });
     }
     @Test

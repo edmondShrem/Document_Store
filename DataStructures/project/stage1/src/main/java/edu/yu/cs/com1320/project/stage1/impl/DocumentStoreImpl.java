@@ -41,6 +41,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage1.Docum
         while(true) {
             try {
                 bytes = input.readAllBytes();
+                input.close();
                 break;
             } catch (IOException e){
                 continue;

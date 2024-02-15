@@ -15,6 +15,13 @@ public class DocumentImplTest{
         d = new DocumentImpl(new URI("file:///cheese/grapeSoda"), "hello");
     }
     @Test
+    void equalsTest() throws URISyntaxException {
+        Integer sameCode = Integer.valueOf(d.hashCode());
+        assertFalse(d.equals(sameCode));
+        assertEquals(d,d);
+        assertNotEquals(d, new DocumentImpl(new URI("file:///cheese/grapeSoda"), "wfew"));
+    }
+    @Test
     void constructorTXTTestEXP()  {
         assertThrows(IllegalArgumentException.class, () -> {
             new DocumentImpl(null, "");
