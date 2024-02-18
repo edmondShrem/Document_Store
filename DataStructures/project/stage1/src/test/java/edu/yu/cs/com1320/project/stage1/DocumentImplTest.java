@@ -27,7 +27,7 @@ public class DocumentImplTest{
             new DocumentImpl(null, "");
         });
         assertThrows(IllegalArgumentException.class, () -> {
-            new DocumentImpl(new URI("bruhmoment://192.0.2.16:80"), "yo");
+            new DocumentImpl(new URI("bruhmoment6://192.0.2.16:80"), "yo");
         });
         assertThrows(IllegalArgumentException.class, () -> {
             new DocumentImpl(new URI("hello", "hello", "hello"), "");
