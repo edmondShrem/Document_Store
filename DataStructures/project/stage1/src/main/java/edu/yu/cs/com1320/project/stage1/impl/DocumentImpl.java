@@ -11,7 +11,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage1.Document {
     URI uri;
     String text;
     byte[] binaryData;
-    public DocumentImpl(URI uri, String txt) throws IllegalArgumentException{
+    public DocumentImpl(URI uri, String txt) {
         if (uri == null || uri.getPath() == null || uri.getPath().isEmpty() || txt == null || txt.equals("")){
             throw new IllegalArgumentException("One or more arguments were blank or null");
         }
@@ -30,7 +30,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage1.Document {
         this.metaData = new HashMap<>();
     }
     @Override
-    public String setMetadataValue(String key, String value) throws IllegalArgumentException{
+    public String setMetadataValue(String key, String value) {
         if (key == null || key.equals("")){
             throw new IllegalArgumentException("key is null or blank");
         }
