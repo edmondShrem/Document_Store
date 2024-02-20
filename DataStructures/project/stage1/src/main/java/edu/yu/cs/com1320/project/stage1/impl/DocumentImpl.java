@@ -68,7 +68,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage1.Document {
         int result = uri.hashCode();
         result = 31 * result + (text != null ? text.hashCode() : 0);
         result = 31 * result + Arrays.hashCode(binaryData);
-        return result;
+        return Math.abs(result);
     }
     @Override
     public boolean equals(Object o){
