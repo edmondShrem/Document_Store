@@ -1,7 +1,10 @@
 package edu.yu.cs.com1320.project.impl;
 
 import edu.yu.cs.com1320.project.HashTable;
+
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 public class HashTableImpl<Key, Value> implements HashTable{
@@ -57,7 +60,7 @@ public class HashTableImpl<Key, Value> implements HashTable{
                 return temp;
             }
             if (old.next.next == null){
-                old.next = e;
+                old.next.next = e;
                 return null;
             }
             old = old.next;
@@ -111,28 +114,28 @@ public class HashTableImpl<Key, Value> implements HashTable{
 
     @Override
     public Set<Key> keySet() {
-      /*  Set<Key> keys = new HashSet<>();
+        Set<Key> keys = new HashSet<>();
         for(Entry<Key, Value> e : this.entries){
             while(e != null){
                 keys.add(e.key);
                 e = e.next;
             }
         }
-        return java.util.Collections.unmodifiableSet(keys);*/
-        return null;
+        return java.util.Collections.unmodifiableSet(keys);
+
     }
 
     @Override
     public Collection<Value> values() {
-        /*Collection<Value> values = new ArrayList<>();
+        Collection<Value> values = new ArrayList<>();
         for(Entry<Key, Value> e : this.entries){
             while(e != null){
                 values.add(e.value);
                 e = e.next;
             }
         }
-        return java.util.Collections.unmodifiableCollection(values); */
-        return null;
+        return java.util.Collections.unmodifiableCollection(values);
+
     }
 
     @Override
