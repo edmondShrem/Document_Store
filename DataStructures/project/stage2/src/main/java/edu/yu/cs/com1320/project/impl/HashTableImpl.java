@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class HashTableImpl<Key, Value> implements HashTable{
-    class Entry<Key, Value>{
+    private class Entry<Key, Value>{
         Key key;
         Value value;
         Entry<Key, Value> next;

@@ -98,9 +98,9 @@ public class HashTableImplTest {
         h.put("2QU", "5");
         h.put("2R6", "6");
         assertEquals(7, h.size());
-        h.put("336", null);
+        h.put("1ot", null);
         assertEquals(6, h.size());
-        assertTrue(h.containsKey("1ot"));
+        assertTrue(h.containsKey("336"));
         assertTrue(h.containsKey("1pU"));
         assertTrue(h.containsKey("1q6"));
         assertTrue(h.containsKey("2Pt"));
