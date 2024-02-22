@@ -50,18 +50,18 @@ public class HashTableImpl<Key, Value> implements HashTable{
         if(old == null){
             entries[i] = e;
             return null;
+        } else if (old.key.equals(k)){
+            Value temp = old.value;
+            entries[i] = e;
+            return temp;
         }
         while (old.next != null){
-            if (old.next.key.equals(e.key)){
+            if (old.next.key.equals(k)){
                 Value temp = old.next.value;
                 e.next = old.next.next;
                 old.next = e;
                 old = e;
                 return temp;
-            }
-            if (old.next.next == null){
-                old.next.next = e;
-                return null;
             }
             old = old.next;
         }

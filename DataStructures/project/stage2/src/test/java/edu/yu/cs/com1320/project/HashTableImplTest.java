@@ -20,6 +20,9 @@ public class HashTableImplTest {
     void putTest() {
         h.put("FB", "b");
         h.put("Ea", "yo");
+        h.put("FB", "b");
+        h.put("Ea", "yo");
+        assertEquals(2, h.size());
         assertEquals("b", h.get("FB"));
         assertEquals("yo", h.get("Ea"));
         h.put("FB", null);
