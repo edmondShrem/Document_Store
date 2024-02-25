@@ -2,17 +2,14 @@ package edu.yu.cs.com1320.project.impl;
 
 import edu.yu.cs.com1320.project.HashTable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
-public class HashTableImpl<Key, Value> implements HashTable{
-    private class Entry<Key, Value>{
-        Key key;
-        Value value;
-        Entry<Key, Value> next;
-        Entry(Key k, Value v){
+public class HashTableImpl<Key, Value> implements HashTable<Key, Value>{
+    private class Entry<K, V>{
+        K key;
+        V value;
+        Entry<K, V> next;
+        Entry(K k, V v){
             if(k == null){
                 throw new IllegalArgumentException();
             }
@@ -26,8 +23,9 @@ public class HashTableImpl<Key, Value> implements HashTable{
         entries = new Entry[5];
     }
 
+
     @Override
-    public Object get(Object k) {
+    public Value get(Key k) {
         int i = hashFunction((Key) k);
         Entry<Key, Value> e = entries[i];
         while(e != null){
@@ -40,7 +38,7 @@ public class HashTableImpl<Key, Value> implements HashTable{
     }
 
     @Override
-    public Object put(Object k, Object v) {
+    public Value put(Key k, Value v) {
         if(v == null){
             return this.delete((Key) k);
         }
@@ -91,21 +89,21 @@ public class HashTableImpl<Key, Value> implements HashTable{
     }
 
     @Override
-    public boolean containsKey(Object o) {
-        if(o == null){
+    public boolean containsKey(Key key) {
+        if(key == null){
             throw new NullPointerException();
         }
-        int i = hashFunction((Key) o);
+        int i = hashFunction((Key) key);
         Entry<Key, Value> e = entries[i];
         if (e == null){
             return false;
         }
-        if(e.key.equals(o)){
+        if(e.key.equals(key)){
             return true;
         }
         while(e.next != null){
             e = e.next;
-            if(e.key.equals(o)){
+            if(e.key.equals(key)){
                 return true;
             }
         }
@@ -121,7 +119,7 @@ public class HashTableImpl<Key, Value> implements HashTable{
                 e = e.next;
             }
         }
-        return java.util.Collections.unmodifiableSet(keys);
+        return Collections.unmodifiableSet(keys);
 
     }
 
@@ -134,7 +132,7 @@ public class HashTableImpl<Key, Value> implements HashTable{
                 e = e.next;
             }
         }
-        return java.util.Collections.unmodifiableCollection(values);
+        return Collections.unmodifiableCollection(values);
 
     }
 

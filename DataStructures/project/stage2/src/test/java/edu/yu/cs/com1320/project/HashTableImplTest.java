@@ -27,6 +27,7 @@ public class HashTableImplTest {
         assertEquals("yo", h.get("Ea"));
         h.put("FB", null);
         assertEquals("yo", h.get("Ea"));
+        assertNull(h.put("ladeeda", null));
     }
 
     @Test
@@ -94,6 +95,8 @@ public class HashTableImplTest {
     @Test
     void sCollide(){
         h.put("336", "0");
+        h.put("336", "0");
+        h.put("1ot", "1");
         h.put("1ot", "1");
         h.put("1pU", "2");
         h.put("1q6", "3");
@@ -101,13 +104,13 @@ public class HashTableImplTest {
         h.put("2QU", "5");
         h.put("2R6", "6");
         assertEquals(7, h.size());
-        h.put("1ot", null);
+        h.put("2QU", null);
         assertEquals(6, h.size());
         assertTrue(h.containsKey("336"));
         assertTrue(h.containsKey("1pU"));
         assertTrue(h.containsKey("1q6"));
         assertTrue(h.containsKey("2Pt"));
-        assertTrue(h.containsKey("2QU"));
+        assertFalse(h.containsKey("2QU"));
         assertTrue(h.containsKey("2R6"));
     }
 }

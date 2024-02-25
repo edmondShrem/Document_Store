@@ -5,7 +5,8 @@ import edu.yu.cs.com1320.project.impl.HashTableImpl;
 
 import java.net.URI;
 import java.util.Arrays;
-
+import java.util.Collection;
+import java.util.Set;
 
 
 public class DocumentImpl implements edu.yu.cs.com1320.project.stage2.Document {
@@ -22,7 +23,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage2.Document {
         this.text = txt;
         this.binaryData = null;
         this.metaData = new HashTableImpl<>();
-        this.copy = new HashTableImpl<>();
+
     }
     public DocumentImpl(URI uri, byte[] binaryData){
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || binaryData == null || binaryData.length == 0){
@@ -32,14 +33,12 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage2.Document {
         this.text = null;
         this.binaryData = binaryData;
         this.metaData = new HashTableImpl<>();
-        this.copy = new HashTableImpl<>();
     }
     @Override
     public String setMetadataValue(String key, String value) {
         if (key == null || key.equals("")){
             throw new IllegalArgumentException("key is null or blank");
         }
-        this.copy.put(key, value);
         return this.metaData.put(key, value);
     }
 
@@ -53,6 +52,11 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage2.Document {
 
     @Override
     public HashTable<String, String> getMetadata() {
+        copy = new HashTableImpl<String, String>();
+        Set<String> keys = metaData.keySet();
+        for(String k : keys){
+            copy.put(k, metaData.get(k));
+        }
         return copy;
     }
 
