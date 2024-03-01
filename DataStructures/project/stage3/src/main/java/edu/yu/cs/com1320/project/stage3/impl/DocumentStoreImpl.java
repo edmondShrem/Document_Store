@@ -13,12 +13,12 @@ import java.net.URI;
 public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.DocumentStore{
     private HashTable<URI, DocumentImpl> docs;
     private StackImpl<Command> commandStack;
-    private int stackSize;
+    private int trueStackSize;
 
     public DocumentStoreImpl(){
         this.docs = new HashTableImpl<>();
         this.commandStack = new StackImpl<>();
-        this.stackSize = 0;
+        this.trueStackSize = 0;
     }
 
     @Override
@@ -26,11 +26,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
         if(uri == null || uri.getPath() == null || uri.getPath().equals("") || key == null || key.equals("") || docs.get(uri) == null){
             throw new IllegalArgumentException("the uri is null or blank, if there is no document stored at that uri, or the key is null or blank");
         }
-        if(stackSize <= commandStack.size()) {
+        if(trueStackSize <= commandStack.size()) {
             String old = this.getMetadata(uri, key);
             commandStack.push(new Command(uri, (uri1) -> setMetadata(uri1, key, old)));
-            stackSize = commandStack.size();
         }
+        trueStackSize = commandStack.size();
         return this.docs.get(uri).setMetadataValue(key, value);
     }
 
@@ -49,6 +49,10 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
         }
         if(input == null){
             DocumentImpl prev = docs.put(uri, null);
+            if(trueStackSize <= commandStack.size()) {
+                commandStack.push(new Command(uri, (uri1) -> docs.put(uri1, prev)));
+            }
+            trueStackSize = commandStack.size();
             return (prev == null ? 0 : prev.hashCode());
         }
         byte[] bytes;
@@ -68,8 +72,16 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
             prev = docs.put(uri, new DocumentImpl(uri, bytes));
         }
         if (prev == null){
+            if(trueStackSize <= commandStack.size()) {
+                commandStack.push(new Command(uri, (uri1) -> delete(uri1)));
+            }
+            trueStackSize = commandStack.size();
             return 0;
         } else {
+            if(trueStackSize <= commandStack.size()) {
+                commandStack.push(new Command(uri, (uri1) -> docs.put(uri1, prev)));
+            }
+            trueStackSize = commandStack.size();
             return prev.hashCode();
         }
     }
@@ -81,7 +93,13 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
 
     @Override
     public boolean delete(URI url) {
-        return docs.put(url, null) != null;
+
+        DocumentImpl prev = docs.put(url, null);
+        if(trueStackSize <= commandStack.size()) {
+            commandStack.push(new Command(url, (uri1) -> docs.put(uri1, prev)));
+        }
+        trueStackSize = commandStack.size();
+        return prev != null;
     }
 
     @Override
@@ -92,7 +110,10 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
         Command c = commandStack.pop();
         c.undo();
     }
-
+    public int size(){
+        return commandStack.size();
+    }
+    //something's rotten in teh state of delete by uri. When i undo, remove 2 things fro the stakc, but only undo run the first one. AAAAAAAA
     @Override
     public void undo(URI url) throws IllegalStateException {
         if(commandStack.size() == 0){
@@ -103,24 +124,20 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
         while (!found){
             //ensures that if its not found everything gets put back first before throwing, dont wanna break the system
             if(commandStack.size() == 0){
-                int size = temp.size();
-                for(int i = 0; i < size; i ++){
-                    //redo
+                while(temp.size() != 0){
                     commandStack.push(temp.pop());
                 }
                 throw new IllegalStateException("URI is not represented in the command stack");
             }
             if (commandStack.peek().getUri().equals(url)){
                 undo();
+                commandStack.pop();
                 found = true;
             } else {
-                commandStack.peek().undo();
                 temp.push(commandStack.pop());
             }
         }
-        for(int i = 0; i < temp.size(); i ++){
-            //how do i "redo" them?
-            //probably gotta figure out howda undo em first, but who knows maaaaaaaaaaaaan
+        while(temp.size() > 0){
             commandStack.push(temp.pop());
         }
     }

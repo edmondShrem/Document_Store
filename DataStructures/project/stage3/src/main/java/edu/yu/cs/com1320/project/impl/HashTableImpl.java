@@ -40,7 +40,7 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value>{
     @Override
     public Value put(Key k, Value v) {
         if(v == null){
-            return this.delete((Key) k);
+            return this.delete(k);
         }
         if(gottaDouble()){doubleAndRehash();}
         Entry<Key, Value> e = new Entry<Key, Value>((Key)k, (Value)v);

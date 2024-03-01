@@ -32,11 +32,34 @@ public class DocumentStoreImplTest {
         ds.put(i, new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.setMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda", "bro");
         ds.setMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda", "show");
+        ds.setMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda", "sow");
+        ds.undo();
+        assertEquals("show", ds.getMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda"));
         ds.undo();
         assertEquals("bro", ds.getMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda"));
     }
     @Test
-    void badInputSetMDTest(){
+    void putUndoTest() throws URISyntaxException {
+        ds.put(new ByteArrayInputStream("1".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("2".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("4".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("5".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("6".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("7".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.undo();
+        assertEquals("6", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo();
+        //found the isue. when calling this way, we remove multiple items
+        assertEquals("5",ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("4", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("3", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("2", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("1", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
 
     }
 

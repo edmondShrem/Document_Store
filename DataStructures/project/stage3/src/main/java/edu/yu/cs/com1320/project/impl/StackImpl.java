@@ -32,7 +32,7 @@ public class StackImpl<T> implements Stack<T>{
         if(this.isFull()){
             return stack.length;
         }
-        for(int i = 0; i < stack.length; i ++){
+        for(int i = 0; i <= stack.length; i ++){
             if (stack[i] == null){
                 return i;
             }
