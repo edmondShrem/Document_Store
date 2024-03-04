@@ -33,7 +33,7 @@ public class DocumentStoreImplTest {
         ds.setMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda", "bro");
         ds.setMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda", "show");
         ds.setMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda", "sow");
-        ds.undo();
+        ds.undo(new URI("file:///cheese/grapeSoda"));
         assertEquals("show", ds.getMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda"));
         ds.undo();
         assertEquals("bro", ds.getMetadata(new URI("file:///cheese/grapeSoda"), "file:///cheese/grapeSoda"));
@@ -43,13 +43,14 @@ public class DocumentStoreImplTest {
         ds.put(new ByteArrayInputStream("1".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("2".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boi".getBytes()), new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("4".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("5".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("6".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("7".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         ds.undo();
         assertEquals("6", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
-        ds.undo();
+        ds.undo(new URI("file:///wee/grapeSoda"));
         //found the isue. when calling this way, we remove multiple items
         assertEquals("5",ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
         ds.undo(new URI("file:///wee/grapeSoda"));
@@ -60,8 +61,56 @@ public class DocumentStoreImplTest {
         assertEquals("2", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
         ds.undo(new URI("file:///wee/grapeSoda"));
         assertEquals("1", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
-
+        assertEquals("boi", ds.get(new URI("file:///cheese/grapeSoda")).getDocumentTxt());
+        ds.undo();
+        assertNull(ds.get(new URI("file:///cheese/grapeSoda")));
     }
+    @Test
+    void undoDeleteTest() throws URISyntaxException {
+        ds.put(new ByteArrayInputStream("1".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("2".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boi".getBytes()), new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("4".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("5".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("6".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("7".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.delete(new URI("file:///wee/grapeSoda"));
+        ds.undo();
+        assertEquals("7", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("6", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        //found the isue. when calling this way, we remove multiple items
+        assertEquals("5",ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("4", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("3", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("2", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("1", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.put(new ByteArrayInputStream("quack".getBytes()), new URI("file:///quack/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("quack", ds.get(new URI("file:///quack/grapeSoda")).getDocumentTxt());
+    }
+
+    @Test
+    void everythingEverywhereAllAtOnce() throws URISyntaxException {
+        ds.put(new ByteArrayInputStream("3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boi".getBytes()), new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.setMetadata(new URI("file:///wee/grapeSoda"), "file:///wee/grapeSoda", "jabroni");
+        ds.delete(new URI("file:///cheese/grapeSoda"));
+        ds.put(new ByteArrayInputStream("fleeb".getBytes()), new URI("file:///slow/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.undo();
+        assertNull(ds.get(new URI("file:///slow/grapeSoda")));
+        ds.undo(new URI("file:///wee/grapeSoda"));
+        assertEquals("3", ds.get(new URI("file:///wee/grapeSoda")).getDocumentTxt());
+        ds.undo();
+        assertNotNull(ds.get(new URI("file:///cheese/grapeSoda")));
+    }
+
 
     @Test
     void putBadTest(){

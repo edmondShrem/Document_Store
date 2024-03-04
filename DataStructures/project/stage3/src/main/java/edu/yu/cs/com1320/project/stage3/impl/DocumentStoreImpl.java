@@ -113,7 +113,6 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
     public int size(){
         return commandStack.size();
     }
-    //something's rotten in teh state of delete by uri. When i undo, remove 2 things fro the stakc, but only undo run the first one. AAAAAAAA
     @Override
     public void undo(URI url) throws IllegalStateException {
         if(commandStack.size() == 0){
@@ -130,8 +129,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
                 throw new IllegalStateException("URI is not represented in the command stack");
             }
             if (commandStack.peek().getUri().equals(url)){
-                undo();
-                commandStack.pop();
+                commandStack.pop().undo();
                 found = true;
             } else {
                 temp.push(commandStack.pop());
