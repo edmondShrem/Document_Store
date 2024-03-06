@@ -17,6 +17,9 @@ public class StackImpl<T> implements Stack<T>{
 
     @Override
     public T pop() {
+        if(this.size() == 0){
+            return null;
+        }
         T t = stack[this.size() - 1];
         stack[this.size() - 1] = null;
         return t;
@@ -24,6 +27,9 @@ public class StackImpl<T> implements Stack<T>{
 
     @Override
     public T peek() {
+        if(this.size() == 0){
+            return null;
+        }
         return stack[this.size() - 1];
     }
 

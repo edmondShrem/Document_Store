@@ -56,21 +56,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
             return (prev == null ? 0 : prev.hashCode());
         }
         byte[] bytes;
-        while(true) {
-            try {
-                bytes = input.readAllBytes();
-                input.close();
-                break;
-            } catch (IOException e){
-                continue;
-            }
-        }
+        bytes = getBytes(input);
         DocumentImpl prev;
-        if(format == DocumentFormat.TXT){
-            prev = docs.put(uri, new DocumentImpl(uri, new String(bytes)));
-        } else{
-            prev = docs.put(uri, new DocumentImpl(uri, bytes));
-        }
+        prev = putBasedOnFormat(uri, format, bytes);
         if (prev == null){
             if(trueStackSize <= commandStack.size()) {
                 commandStack.push(new Command(uri, (uri1) -> delete(uri1)));
@@ -86,6 +74,30 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
         }
     }
 
+    private DocumentImpl putBasedOnFormat(URI uri, DocumentFormat format, byte[] bytes) {
+        DocumentImpl prev;
+        if(format == DocumentFormat.TXT){
+            prev = docs.put(uri, new DocumentImpl(uri, new String(bytes)));
+        } else{
+            prev = docs.put(uri, new DocumentImpl(uri, bytes));
+        }
+        return prev;
+    }
+
+    private static byte[] getBytes(InputStream input) {
+        byte[] bytes;
+        while(true) {
+            try {
+                bytes = input.readAllBytes();
+                input.close();
+                break;
+            } catch (IOException e){
+                continue;
+            }
+        }
+        return bytes;
+    }
+
     @Override
     public Document get(URI url) {
         return docs.get(url);
@@ -93,9 +105,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
 
     @Override
     public boolean delete(URI url) {
-
         DocumentImpl prev = docs.put(url, null);
-        if(trueStackSize <= commandStack.size()) {
+        if(trueStackSize <= commandStack.size() && prev != null) {
             commandStack.push(new Command(url, (uri1) -> docs.put(uri1, prev)));
         }
         trueStackSize = commandStack.size();
@@ -110,9 +121,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage3.Docum
         Command c = commandStack.pop();
         c.undo();
     }
-    public int size(){
-        return commandStack.size();
-    }
+
     @Override
     public void undo(URI url) throws IllegalStateException {
         if(commandStack.size() == 0){

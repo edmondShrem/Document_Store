@@ -1,5 +1,6 @@
 package edu.yu.cs.com1320.project.stage3.impl;
 
+import edu.yu.cs.com1320.project.impl.StackImpl;
 import edu.yu.cs.com1320.project.stage3.DocumentStore;
 import edu.yu.cs.com1320.project.stage3.impl.DocumentStoreImpl;
 import org.junit.jupiter.api.AfterAll;
@@ -111,7 +112,13 @@ public class DocumentStoreImplTest {
         assertNotNull(ds.get(new URI("file:///cheese/grapeSoda")));
     }
 
+    @Test
+    void stackTest(){
+        StackImpl<String> s = new StackImpl<>();
+        assertNull(s.pop());
+        assertNull(s.peek());
 
+    }
     @Test
     void putBadTest(){
         assertThrows(IllegalArgumentException.class, () -> {
