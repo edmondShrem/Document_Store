@@ -117,7 +117,14 @@ public class DocumentStoreImplTest {
         StackImpl<String> s = new StackImpl<>();
         assertNull(s.pop());
         assertNull(s.peek());
-
+        s.push(null);
+        assertEquals(0, s.size());
+        s.push("ji");
+        s.push(null);
+        s.push("wee");
+        assertEquals(2, s.size());
+        assertEquals("wee", s.pop());
+        assertEquals("ji", s.pop());
     }
     @Test
     void putBadTest(){

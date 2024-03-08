@@ -9,6 +9,9 @@ public class StackImpl<T> implements Stack<T>{
 
     @Override
     public void push(T element) {
+        if(element == null){
+            return;
+        }
         if(this.isFull()){
             this.arrayDouble();
         }
