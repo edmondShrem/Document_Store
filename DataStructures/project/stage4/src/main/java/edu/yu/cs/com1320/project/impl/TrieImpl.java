@@ -57,19 +57,19 @@ public class TrieImpl<Value> implements Trie<Value>{
         Value largest = null;
         int largeI = 0;
         Value[] arr = (Value[]) s.toArray();
-        List<Value> l = new ArrayList<>();
-        for (Value v : arr) {
-            for (int i = 0; i < arr.length; i++) {
-                if (arr[i] != null) {
-                    if (comparator.compare(largest, arr[i]) < 0) {
-                        largest = arr[i];
-                        largeI = i;
-                    }
+        List<Value> l;
+        for(int i = 0; i < arr.length; i ++){
+            largest = arr[i];
+            largeI = i;
+            for(int j = i; j < arr.length; j++){
+                if(comparator.compare(largest, arr[j]) < 0){
+                    largeI = j;
                 }
             }
-            l.add(largest);
-            arr[largeI] = null;
+            arr[i] = arr[largeI];
+            arr[largeI] = largest;
         }
+        l = Arrays.stream(arr).toList();
         return l;
     }
 
@@ -77,7 +77,11 @@ public class TrieImpl<Value> implements Trie<Value>{
     @Override
     public Set<Value> get(String key) {
         //shallow copy?
-        Set<Value> s = this.get(this.root, key, 0).vals;
+        Node<Value> n = this.get(this.root, key, 0);
+        if(n == null){
+            return new HashSet<Value>();
+        }
+        Set<Value> s = n.vals;
         Set<Value> copy = new HashSet<>(s);
         return copy;
     }
@@ -102,13 +106,37 @@ public class TrieImpl<Value> implements Trie<Value>{
 
     @Override
     public List<Value> getAllWithPrefixSorted(String prefix, Comparator<Value> comparator) {
-        return null;
+        Node<Value> subRoot = this.get(this.root, prefix, 0);
+        Set<Value> s = new HashSet<Value>();
+        walkDownAndAdd(subRoot, s);
+        List<Value> l = getSortedList(s, comparator);
+        return l;
     }
 
     @Override
     public Set<Value> deleteAllWithPrefix(String prefix) {
-        return null;
+        Node<Value> subRoot = this.get(this.root, prefix, 0);
+        Set<Value> s = new HashSet<Value>();
+        walkDownAndAdd(subRoot, s);
+        subRoot = this.get(this.root, prefix, 0);
+        subRoot.vals = new HashSet<Value>();
+         for(int i = 0; i < alphabetSize; i++){
+             subRoot.links[i] = null;
+         }
+         assert this.get(this.root, prefix, 0).vals.isEmpty();
+        assert s.toArray()[0] != null;
+        return s;
     }
+    private void walkDownAndAdd(Node<Value> n, Set<Value>s){
+        if(n == null){
+            return;
+        }
+        s.addAll(n.vals);
+        for(Node<Value> k : n.links){
+            walkDownAndAdd(k, s);
+        }
+    }
+
 
     @Override
     public Set<Value> deleteAll(String key) {
@@ -150,12 +178,12 @@ public class TrieImpl<Value> implements Trie<Value>{
     @Override
     public Value delete(String key, Value val) {
         Node<Value> n = this.get(this.root, key, 0);
-        if(n.vals.remove(val)){
+        if(n != null && n.vals.remove(val)){
             return val;
         }
         return null;
     }
-
+//check permission
     public static class Node<Value>
     {
         protected Set<Value> vals = new HashSet<>();
