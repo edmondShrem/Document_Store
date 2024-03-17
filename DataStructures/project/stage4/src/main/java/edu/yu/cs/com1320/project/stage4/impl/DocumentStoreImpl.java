@@ -17,12 +17,14 @@ import java.util.Set;
 
 public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.DocumentStore{
     private HashTable<URI, DocumentImpl> docs;
+    private TrieImpl<Document> wordTrie;
     private StackImpl<Command> commandStack;
     private int trueStackSize;
 
     public DocumentStoreImpl(){
         this.docs = new HashTableImpl<>();
         this.commandStack = new StackImpl<>();
+        this.wordTrie = new TrieImpl<>();
         this.trueStackSize = 0;
     }
 
@@ -52,6 +54,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
         if(uri == null || uri.getPath() == null || uri.getPath().equals("") || format == null){
             throw new IllegalArgumentException("uri is null or empty, or format is null");
         }
+        //still have to deal w/deleting visavi the trie
         if(input == null){
             DocumentImpl prev = docs.put(uri, null);
             if(trueStackSize <= commandStack.size()) {
@@ -82,7 +85,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
     private DocumentImpl putBasedOnFormat(URI uri, DocumentFormat format, byte[] bytes) {
         DocumentImpl prev;
         if(format == DocumentFormat.TXT){
-            prev = docs.put(uri, new DocumentImpl(uri, new String(bytes)));
+            DocumentImpl current = new DocumentImpl(uri, new String(bytes));
+            prev = docs.put(uri, current);
         } else{
             prev = docs.put(uri, new DocumentImpl(uri, bytes));
         }
@@ -107,10 +111,16 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
     public Document get(URI url) {
         return docs.get(url);
     }
-
+    //i think i dealt properly with the trie?
     @Override
     public boolean delete(URI url) {
         DocumentImpl prev = docs.put(url, null);
+        if(prev != null) {
+            Set<String> words = prev.getWords();
+            for (String s : words) {
+                wordTrie.delete(s, prev);
+            }
+        }
         if(trueStackSize <= commandStack.size() && prev != null) {
             commandStack.push(new Command(url, (uri1) -> docs.put(uri1, prev)));
         }

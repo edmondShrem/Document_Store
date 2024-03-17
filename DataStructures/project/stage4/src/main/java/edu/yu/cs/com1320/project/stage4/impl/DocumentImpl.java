@@ -5,6 +5,7 @@ import edu.yu.cs.com1320.project.impl.HashTableImpl;
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,15 +16,63 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
     private URI uri;
     private String text;
     private byte[] binaryData;
+    private HashTable<String, Integer> wordCounts;
     public DocumentImpl(URI uri, String txt) {
-        if (uri == null || uri.getPath() == null || uri.getPath().isEmpty() || txt == null || txt.equals("")){
+        if (uri == null || uri.getPath() == null || uri.getPath().isEmpty() || txt == null || txt.equals("")) {
             throw new IllegalArgumentException("One or more arguments were blank or null");
         }
         this.uri = uri;
         this.text = txt;
         this.binaryData = null;
         this.metaData = new HashTableImpl<>();
+        this.wordCounts = new HashTableImpl<>();
+        this.setWordTable();
+    }
+    //48-57 = nums
+    //65-90 = caps
+    //97-122 = lowers
+    private void setWordTable(){
+        String[] arr = this.text.split(" ");
+        char[] chars;
+        String alphanumeric = "";
+        for(String str : arr){
+            getAlphanumeric(str, alphanumeric);
+            //the word already appears in the table
+            if(wordCounts.containsKey(alphanumeric)){
+                int prev = wordCounts.get(alphanumeric);
+                wordCounts.put(alphanumeric, prev + 1);
+            } else {
+                //this is a new word
+                wordCounts.put(alphanumeric, 1);
+            }
+            alphanumeric = "";
+        }
+    }
 
+    private void getAlphanumeric(String str, String alphanumeric) {
+        char[] chars;
+        chars = str.toCharArray();
+        for(char c : chars){
+            if(isAlphanumeric(c)){
+                alphanumeric.concat("" + c);
+            }
+        }
+    }
+
+    private boolean isAlphanumeric(char c){
+        if (c >= 48 && c <= 57){
+            //is number
+            return true;
+        }
+        if (c >= 65 && c <= 90){
+            //is capital letter
+            return true;
+        }
+        if (c >= 97 && c <= 122){
+            //is lowercase letter
+            return true;
+        }
+        return false;
     }
     public DocumentImpl(URI uri, byte[] binaryData){
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || binaryData == null || binaryData.length == 0){
@@ -31,6 +80,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
         }
         this.uri = uri;
         this.text = null;
+        this.wordCounts = new HashTableImpl<>();
         this.binaryData = binaryData;
         this.metaData = new HashTableImpl<>();
     }
@@ -71,26 +121,17 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
 
     @Override
     public int wordCount(String word) {
-        if(this.getDocumentBinaryData() != null) {
-            return 0;
-        }
-        int count = 0;
-        String[] words = text.split(" ");
-        for(String s:words){
-            if(s.equals(word)){
-                count ++;
-            }
-        }
-        return count;
+        String ANSearchTerm = "";
+        getAlphanumeric(word, ANSearchTerm);
+       if(this.binaryData != null || this.wordCounts.get(ANSearchTerm) == null){
+           return 0;
+       } else {
+           return this.wordCounts.get(ANSearchTerm);
+       }
     }
-
     @Override
     public Set<String> getWords() {
-        if(this.getDocumentBinaryData() != null) {
-            //we shall see if null or empty but ok
-            return null;
-        }
-        return new HashSet<>(Arrays.stream(text.split("")).toList());
+        return wordCounts.keySet();
     }
 
     @Override

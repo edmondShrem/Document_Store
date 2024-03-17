@@ -143,6 +143,7 @@ public class TrieImpl<Value> implements Trie<Value>{
         Node<Value> n = this.get(this.root, key, 0);
         Set<Value> s = this.get(key);
         n.vals = new HashSet<Value>();
+        this.deleteAll(this.root, key, 0);
         assert s != null;
         return s;
     }
@@ -179,6 +180,9 @@ public class TrieImpl<Value> implements Trie<Value>{
     public Value delete(String key, Value val) {
         Node<Value> n = this.get(this.root, key, 0);
         if(n != null && n.vals.remove(val)){
+            if(n.vals.isEmpty()){
+                this.deleteAll(this.root, key, 0);
+            }
             return val;
         }
         return null;
