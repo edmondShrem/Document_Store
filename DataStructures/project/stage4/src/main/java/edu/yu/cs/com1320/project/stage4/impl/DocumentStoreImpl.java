@@ -5,15 +5,12 @@ import edu.yu.cs.com1320.project.impl.HashTableImpl;
 import edu.yu.cs.com1320.project.impl.StackImpl;
 import edu.yu.cs.com1320.project.impl.TrieImpl;
 import edu.yu.cs.com1320.project.stage4.Document;
-import edu.yu.cs.com1320.project.stage4.Document;
 import edu.yu.cs.com1320.project.undo.Command;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.DocumentStore{
     private HashTable<URI, DocumentImpl> docs;
@@ -56,7 +53,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
         }
         //still have to deal w/deleting visavi the trie
         if(input == null){
-            DocumentImpl prev = docs.put(uri, null);
+            DocumentImpl prev = docs.get(uri);
+            this.delete(uri);
             if(trueStackSize <= commandStack.size()) {
                 commandStack.push(new Command(uri, (uri1) -> docs.put(uri1, prev)));
             }
@@ -82,11 +80,20 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
         }
     }
 
+    private void throwItIntoTheTrie(Document d){
+        Set<String> set = d.getWords();
+        for(String s : set){
+            wordTrie.put(s, d);
+        }
+    }
+
     private DocumentImpl putBasedOnFormat(URI uri, DocumentFormat format, byte[] bytes) {
         DocumentImpl prev;
         if(format == DocumentFormat.TXT){
             DocumentImpl current = new DocumentImpl(uri, new String(bytes));
             prev = docs.put(uri, current);
+            //still have to delete the previous one
+            this.throwItIntoTheTrie(current);
         } else{
             prev = docs.put(uri, new DocumentImpl(uri, bytes));
         }
@@ -166,53 +173,108 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
 
     @Override
     public List<Document> search(String keyword) {
-        return null;
+        Comparator<Document> c = new docComp(keyword);
+        return wordTrie.getSorted(keyword, c);
     }
 
     @Override
     public List<Document> searchByPrefix(String keywordPrefix) {
-        return null;
+        Comparator<Document> c = new docComp(keywordPrefix);
+        return wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
     }
 
     @Override
     public Set<URI> deleteAll(String keyword) {
-        return null;
+        Comparator<Document> c = new docComp(keyword);
+        List<Document> list = wordTrie.getSorted(keyword, c);
+        return deleteAllAndGetUris(list);
     }
 
     @Override
     public Set<URI> deleteAllWithPrefix(String keywordPrefix) {
-        return null;
+        Comparator<Document> c = new docComp(keywordPrefix);
+        List<Document> list = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
+        return deleteAllAndGetUris(list);
     }
 
+    private Set<URI> deleteAllAndGetUris(List<Document> list) {
+        Set<URI> uris = new HashSet<>();
+        Set<String> words;
+        for(Document d : list){
+            uris.add(d.getKey());
+            //delete from hashtable
+            docs.put(d.getKey(), null);
+            //delete from wordtrie
+            words = d.getWords();
+            for(String s : words){
+                wordTrie.delete(s,d);
+            }
+            //gonna have to delete from metatrie if that becomes a thing
+        }
+        return uris;
+    }
+    //there's a better way to do this but i also need to finish. wooo ;-;
     @Override
     public List<Document> searchByMetadata(Map<String, String> keysValues) {
-        return null;
+        List<Document> list = new ArrayList<>();
+        for(Document d : docs.values()){
+            if(d.getMetadata().keySet().equals(keysValues.keySet()) && d.getMetadata().values().equals(keysValues.values())){
+                list.add(d);
+            }
+        }
+        return list;
     }
 
     @Override
     public List<Document> searchByKeywordAndMetadata(String keyword, Map<String, String> keysValues) {
-        return null;
+        List<Document> byKeyWord = this.search(keyword);
+        return getMetaIntersections(keysValues, byKeyWord);
     }
 
     @Override
     public List<Document> searchByPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) {
-        return null;
+        List<Document> byPrefix = this.searchByPrefix(keywordPrefix);
+        return getMetaIntersections(keysValues, byPrefix);
+    }
+
+    private List<Document> getMetaIntersections(Map<String, String> keysValues, List<Document> byPrefix) {
+        List<Document> byMetaData = this.searchByMetadata(keysValues);
+        List<Document> toReturn = new ArrayList<Document>();
+        for(Document d : byPrefix){
+            if(byMetaData.contains(d)){
+                toReturn.add(d);
+            }
+        }
+        return toReturn;
     }
 
     @Override
     public Set<URI> deleteAllWithMetadata(Map<String, String> keysValues) {
-        return null;
+        List<Document> toDelete = this.searchByMetadata(keysValues);
+        return deleteAllAndGetUris(toDelete);
     }
 
     @Override
     public Set<URI> deleteAllWithKeywordAndMetadata(String keyword, Map<String, String> keysValues) {
-        return null;
+        List<Document> toDeleteKeyword = this.search(keyword);
+        List<Document> toDelete = getMetaIntersections(keysValues, toDeleteKeyword);
+        return deleteAllAndGetUris(toDelete);
     }
 
     @Override
     public Set<URI> deleteAllWithPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) {
-        return null;
+        List<Document> toDeletePrefix = this.search(keywordPrefix);
+        List<Document> toDelete = getMetaIntersections(keysValues, toDeletePrefix);
+        return deleteAllAndGetUris(toDelete);
+    }
+    private class docComp implements Comparator<Document>{
+        String comper;
+        public docComp(String s){
+            this.comper = s;
+        }
+        @Override
+        public int compare(Document o1, Document o2) {
+            return o1.wordCount(comper) - o2.wordCount(comper);
+        }
     }
 }
-
-

@@ -188,12 +188,10 @@ public class TrieImpl<Value> implements Trie<Value>{
         return null;
     }
 //check permission
-    public static class Node<Value>
+    private static class Node<Value>
     {
         protected Set<Value> vals = new HashSet<>();
         protected Node[] links = new Node[TrieImpl.alphabetSize];
 
         }
-    
-
 }

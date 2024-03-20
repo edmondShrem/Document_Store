@@ -121,6 +121,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
 
     @Override
     public int wordCount(String word) {
+        //holds the alphanumeric version of the term
         String ANSearchTerm = "";
         getAlphanumeric(word, ANSearchTerm);
        if(this.binaryData != null || this.wordCounts.get(ANSearchTerm) == null){
