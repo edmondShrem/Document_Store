@@ -48,7 +48,9 @@ public class TrieImplTest {
     @Test
     void putTest(){
         t.put("cool", "1");
+        t.put("cool", null);
         t.put("coolio", "2");
+        t.put("cool", "1");
         t.put("cooliotoolio", "3");
         t.put("coolcoolmountain", "4");
         assertTrue(t.get("cool").contains("1"));

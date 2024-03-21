@@ -78,7 +78,8 @@ public class TrieImpl<Value> implements Trie<Value>{
     public Set<Value> get(String key) {
         //shallow copy?
         Node<Value> n = this.get(this.root, key, 0);
-        if(n == null){
+        if(n == null || n.vals == null){
+            //assert false;
             return new HashSet<Value>();
         }
         Set<Value> s = n.vals;
@@ -190,8 +191,8 @@ public class TrieImpl<Value> implements Trie<Value>{
 //check permission
     private static class Node<Value>
     {
-        protected Set<Value> vals = new HashSet<>();
-        protected Node[] links = new Node[TrieImpl.alphabetSize];
+        public Set<Value> vals = new HashSet<>();
+        public Node[] links = new Node[TrieImpl.alphabetSize];
 
         }
 }

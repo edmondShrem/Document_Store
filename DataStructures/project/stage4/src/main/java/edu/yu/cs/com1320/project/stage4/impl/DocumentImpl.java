@@ -4,10 +4,7 @@ import edu.yu.cs.com1320.project.HashTable;
 import edu.yu.cs.com1320.project.impl.HashTableImpl;
 
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 
 public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
@@ -37,6 +34,8 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
         String alphanumeric = "";
         for(String str : arr){
             getAlphanumeric(str, alphanumeric);
+            alphanumeric = str;
+            assert !alphanumeric.equals("");
             //the word already appears in the table
             if(wordCounts.containsKey(alphanumeric)){
                 int prev = wordCounts.get(alphanumeric);
@@ -50,13 +49,15 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
     }
 
     private void getAlphanumeric(String str, String alphanumeric) {
+        StringBuilder s = new StringBuilder();
         char[] chars;
         chars = str.toCharArray();
         for(char c : chars){
             if(isAlphanumeric(c)){
-                alphanumeric.concat("" + c);
+                s.append(c);
             }
         }
+        str = s.toString();
     }
 
     private boolean isAlphanumeric(char c){
@@ -124,9 +125,12 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
         //holds the alphanumeric version of the term
         String ANSearchTerm = "";
         getAlphanumeric(word, ANSearchTerm);
+        ANSearchTerm = word;
+        assert !ANSearchTerm.isEmpty();
        if(this.binaryData != null || this.wordCounts.get(ANSearchTerm) == null){
            return 0;
        } else {
+           assert this.wordCounts.get(ANSearchTerm) != 0;
            return this.wordCounts.get(ANSearchTerm);
        }
     }
