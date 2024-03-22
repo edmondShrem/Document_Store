@@ -169,16 +169,17 @@ public class DocumentStoreImplTest {
     //trie time :cool:
     @Test
     void searchTest() throws URISyntaxException {
-        ds.put(new ByteArrayInputStream("3 boi 3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
-        ds.put(new ByteArrayInputStream("boi boi 3 7".getBytes()), new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 b''''oi 3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("bo''''i boi 3 7".getBytes()), new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         List<Document> list = ds.search("boi");
         assertEquals(new URI("file:///cheese/grapeSoda"), list.get(0).getKey());
     }
     @Test
     void searchPrefixTest() throws URISyntaxException {
-        ds.put(new ByteArrayInputStream("3 boi boi boi boi 3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
-        ds.put(new ByteArrayInputStream("boing boiefvbosuvo boiwoufvbwipvefpsivbd boingegeg boiweofivbepovbdupob 3 7".getBytes()), new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("%&^%#$&#%$*3 b'oi b''''''''oi bo'''''i bo''''''i 3".getBytes()), new URI("file:///wee/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("b'''''''''''''''''''''oing bo''iefvbosuvo b'oiwoufvbwipvefpsivbd b'oingegeg b'oiweofivbepovbdupob 3 7".getBytes()), new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
         List<Document> list = ds.searchByPrefix("boi");
+        assertEquals(2, list.size());
         assertEquals(new URI("file:///cheese/grapeSoda"), list.get(0).getKey());
     }
     @Test
@@ -216,7 +217,7 @@ public class DocumentStoreImplTest {
     //the joke is meta data = md = doctorb i is smort ^u^
     @Test
     void drSearch(){
-        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 bo''''innnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("3 shomie 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("crones 3 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);

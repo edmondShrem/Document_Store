@@ -33,8 +33,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
         char[] chars;
         String alphanumeric = "";
         for(String str : arr){
-            getAlphanumeric(str, alphanumeric);
-            alphanumeric = str;
+            alphanumeric = getAlphanumeric(str);
             assert !alphanumeric.equals("");
             //the word already appears in the table
             if(wordCounts.containsKey(alphanumeric)){
@@ -48,7 +47,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
         }
     }
 
-    private void getAlphanumeric(String str, String alphanumeric) {
+    private String getAlphanumeric(String str) {
         StringBuilder s = new StringBuilder();
         char[] chars;
         chars = str.toCharArray();
@@ -57,7 +56,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
                 s.append(c);
             }
         }
-        str = s.toString();
+        return s.toString();
     }
 
     private boolean isAlphanumeric(char c){
@@ -123,9 +122,8 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
     @Override
     public int wordCount(String word) {
         //holds the alphanumeric version of the term
-        String ANSearchTerm = "";
-        getAlphanumeric(word, ANSearchTerm);
-        ANSearchTerm = word;
+        String ANSearchTerm;
+        ANSearchTerm = getAlphanumeric(word);
         assert !ANSearchTerm.isEmpty();
        if(this.binaryData != null || this.wordCounts.get(ANSearchTerm) == null){
            return 0;
