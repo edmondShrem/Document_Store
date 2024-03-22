@@ -222,10 +222,13 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
     public List<Document> searchByMetadata(Map<String, String> keysValues) {
         List<Document> list = new ArrayList<>();
         for (Document d : docs.values()) {
-            if (d.getMetadata().keySet().equals(keysValues.keySet()) && d.getMetadata().values().equals(keysValues.values())) {
-                list.add(d);
+            if (d.getMetadata().keySet().containsAll(keysValues.keySet()) ){
+                    if(d.getMetadata().values().containsAll(keysValues.values())){
+                        list.add(d);
+                    }
+                }
             }
-        }
+
         return list;
     }
 
@@ -267,7 +270,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
 
     @Override
     public Set<URI> deleteAllWithPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) {
-        List<Document> toDeletePrefix = this.search(keywordPrefix);
+        List<Document> toDeletePrefix = this.searchByPrefix(keywordPrefix);
         List<Document> toDelete = getMetaIntersections(keysValues, toDeletePrefix);
         return deleteAllAndGetUris(toDelete);
     }

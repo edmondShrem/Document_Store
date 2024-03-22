@@ -4,7 +4,6 @@ import edu.yu.cs.com1320.project.stage4.Document;
 import edu.yu.cs.com1320.project.stage4.DocumentStore;
 import edu.yu.cs.com1320.project.stage4.impl.DocumentStoreImpl;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +12,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -215,7 +216,115 @@ public class DocumentStoreImplTest {
     //the joke is meta data = md = doctorb i is smort ^u^
     @Test
     void drSearch(){
-        
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 shomie 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones 3 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.setMetadata(uris[0], "cactus", "juice");
+        ds.get(uris[0]).setMetadataValue("1" , "2");
+        ds.setMetadata(uris[1], "cacti", "juices");
+        ds.setMetadata(uris[2], "cactusy", "juicey");
+        ds.setMetadata(uris[3], "cactus", "juice");
+        Map<String, String> md = new HashMap<>();
+        md.put("cactus", "juice");
+        md.put("1", "2");
+        List<Document> l = ds.searchByMetadata(md);
+        assertEquals(1, l.size());
+        assertTrue(l.contains(ds.get(uris[0])));
+    }
+    @Test
+    void keywordmdsearchTest(){
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.setMetadata(uris[0], "cactus", "juice");
+        ds.get(uris[0]).setMetadataValue("cactus" , "juice");
+        ds.setMetadata(uris[1], "cacti", "juices");
+        ds.setMetadata(uris[2], "cactusy", "juicey");
+        ds.setMetadata(uris[3], "cactus", "juice");
+        Map<String, String> md = new HashMap<>();
+        md.put("cactus", "juice");
+        List<Document> l = ds.searchByKeywordAndMetadata("3", md);
+        assertEquals(1, l.size());
+        assertTrue(l.contains(ds.get(uris[0])));
+    }
+    @Test
+    void preMdSearchTest(){
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.setMetadata(uris[0], "cactus", "juice");
+        ds.get(uris[0]).setMetadataValue("1", "2");
+        ds.setMetadata(uris[1], "cacti", "juices");
+        ds.setMetadata(uris[2], "cactusy", "juicey");
+        ds.setMetadata(uris[3], "cactus", "juice");
+        Map<String, String> md = new HashMap<>();
+        md.put("cactus", "juice");
+        List<Document> l = ds.searchByPrefixAndMetadata("boi", md);
+        assertEquals(1, l.size());
+        assertTrue(l.contains(ds.get(uris[0])));
+    }
+    @Test
+    void drDelete(){
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.setMetadata(uris[0], "cactus", "juice");
+        ds.get(uris[0]).setMetadataValue("1", "2");
+        ds.setMetadata(uris[1], "cacti", "juices");
+        ds.setMetadata(uris[2], "cactusy", "juicey");
+        ds.setMetadata(uris[3], "cactus", "juice");
+        Map<String, String> md = new HashMap<>();
+        md.put("cactus", "juice");
+        Set<URI> s = ds.deleteAllWithMetadata(md);
+        assertEquals(2, s.size());
+        assertNotNull(ds.get(uris[1]));
+        assertNotNull(ds.get(uris[2]));
+        assertNull(ds.get(uris[0]));
+        assertNull(ds.get(uris[3]));
+    }
+    @Test
+    void deleteKeywordMD(){
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.setMetadata(uris[0], "cactus", "juice");
+        ds.get(uris[0]).setMetadataValue("1", "2");
+        ds.setMetadata(uris[1], "cacti", "juices");
+        ds.setMetadata(uris[2], "cactusy", "juicey");
+        ds.setMetadata(uris[3], "cactus", "juice");
+        Map<String, String> md = new HashMap<>();
+        md.put("cactus", "juice");
+        Set<URI> s = ds.deleteAllWithKeywordAndMetadata("3", md);
+        assertEquals(1, s.size());
+        assertNotNull(ds.get(uris[1]));
+        assertNotNull(ds.get(uris[2]));
+        assertNotNull(ds.get(uris[3]));
+        assertNull(ds.get(uris[0]));
+    }
+    @Test
+    void deletePrefMdTest(){
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("3 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.setMetadata(uris[0], "cactus", "juice");
+        ds.get(uris[0]).setMetadataValue("1", "2");
+        ds.setMetadata(uris[1], "cacti", "juices");
+        ds.setMetadata(uris[2], "cactusy", "juicey");
+        ds.setMetadata(uris[3], "cactus", "juice");
+        Map<String, String> md = new HashMap<>();
+        md.put("cactus", "juice");
+        Set<URI> s = ds.deleteAllWithPrefixAndMetadata("boi", md);
+        assertEquals(1, s.size());
+        assertNotNull(ds.get(uris[1]));
+        assertNotNull(ds.get(uris[2]));
+        assertNotNull(ds.get(uris[3]));
+        assertNull(ds.get(uris[0]));
     }
 }
 
