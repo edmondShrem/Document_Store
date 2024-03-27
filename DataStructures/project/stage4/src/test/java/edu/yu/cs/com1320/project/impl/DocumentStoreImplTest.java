@@ -232,6 +232,9 @@ public class DocumentStoreImplTest {
         List<Document> l = ds.searchByMetadata(md);
         assertEquals(1, l.size());
         assertTrue(l.contains(ds.get(uris[0])));
+        md = new HashMap<>();
+        l = ds.searchByMetadata(md);
+        assertEquals(4, l.size());
     }
     @Test
     void keywordmdsearchTest(){
@@ -327,5 +330,7 @@ public class DocumentStoreImplTest {
         assertNotNull(ds.get(uris[3]));
         assertNull(ds.get(uris[0]));
     }
+    //undos -_-
+
 }
 

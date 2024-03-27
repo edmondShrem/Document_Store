@@ -5,8 +5,11 @@ import edu.yu.cs.com1320.project.impl.HashTableImpl;
 import edu.yu.cs.com1320.project.impl.StackImpl;
 import edu.yu.cs.com1320.project.impl.TrieImpl;
 import edu.yu.cs.com1320.project.stage4.Document;
-import edu.yu.cs.com1320.project.undo.Command;
+import edu.yu.cs.com1320.project.undo.CommandSet;
+import edu.yu.cs.com1320.project.undo.GenericCommand;
+import edu.yu.cs.com1320.project.undo.Undoable;
 
+import javax.print.Doc;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -15,7 +18,7 @@ import java.util.*;
 public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.DocumentStore {
     private HashTable<URI, DocumentImpl> docs;
     private TrieImpl<Document> wordTrie;
-    private StackImpl<Command> commandStack;
+    private StackImpl<Undoable> commandStack;
     private int trueStackSize;
 
     public DocumentStoreImpl() {
@@ -24,17 +27,33 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
         this.wordTrie = new TrieImpl<>();
         this.trueStackSize = 0;
     }
-
+    private int getTrueStackSize(){
+        int x = commandStack.size();
+        StackImpl<Undoable> temp = new StackImpl<>();
+        int count = 0;
+        for(int i = 0; i < x; i++){
+            if(commandStack.peek().getClass().equals(CommandSet.class)){
+                count += ((CommandSet<URI>)(commandStack.peek())).size();
+            } else {
+                count ++;
+            }
+            temp.push(commandStack.pop());
+        }
+        while(temp.size() != 0){
+            commandStack.push(temp.pop());
+        }
+        return count;
+    }
     @Override
     public String setMetadata(URI uri, String key, String value) {
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || key == null || key.equals("") || docs.get(uri) == null) {
             throw new IllegalArgumentException("the uri is null or blank, if there is no document stored at that uri, or the key is null or blank");
         }
-        if (trueStackSize <= commandStack.size()) {
+        if (trueStackSize <= this.getTrueStackSize()) {
             String old = this.getMetadata(uri, key);
-            commandStack.push(new Command(uri, (uri1) -> setMetadata(uri1, key, old)));
+            commandStack.push(new GenericCommand<URI>(uri, (uri1) -> setMetadata(uri1, key, old)));
         }
-        trueStackSize = commandStack.size();
+        trueStackSize = this.getTrueStackSize();
         return this.docs.get(uri).setMetadataValue(key, value);
     }
 
@@ -54,10 +73,10 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
         if (input == null) {
             DocumentImpl prev = docs.get(uri);
             this.delete(uri);
-            if (trueStackSize <= commandStack.size()) {
-                commandStack.push(new Command(uri, (uri1) -> docs.put(uri1, prev)));
+            if (trueStackSize <= this.getTrueStackSize()) {
+                commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { docs.put(uri1, prev); if (prev.getDocumentBinaryData() != null)throwItIntoTheTrie(prev);}));
             }
-            trueStackSize = commandStack.size();
+            trueStackSize = this.getTrueStackSize();
             return (prev == null ? 0 : prev.hashCode());
         }
         byte[] bytes;
@@ -65,16 +84,16 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
         DocumentImpl prev;
         prev = putBasedOnFormat(uri, format, bytes);
         if (prev == null) {
-            if (trueStackSize <= commandStack.size()) {
-                commandStack.push(new Command(uri, (uri1) -> delete(uri1)));
+            if (trueStackSize <= this.getTrueStackSize()) {
+                commandStack.push(new GenericCommand<URI>(uri, (uri1) -> delete(uri1)));
             }
-            trueStackSize = commandStack.size();
+            trueStackSize = this.getTrueStackSize();
             return 0;
         } else {
-            if (trueStackSize <= commandStack.size()) {
-                commandStack.push(new Command(uri, (uri1) -> docs.put(uri1, prev)));
+            if (trueStackSize <= this.getTrueStackSize()) {
+                commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { docs.put(uri1, prev); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
             }
-            trueStackSize = commandStack.size();
+            trueStackSize = this.getTrueStackSize();
             return prev.hashCode();
         }
     }
@@ -131,19 +150,19 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
                 wordTrie.delete(s, prev);
             }
         }
-        if (trueStackSize <= commandStack.size() && prev != null) {
-            commandStack.push(new Command(url, (uri1) -> docs.put(uri1, prev)));
+        if (trueStackSize <= this.getTrueStackSize() && prev != null) {
+            commandStack.push(new GenericCommand<URI>(url, (uri1) -> { docs.put(uri1, prev); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
         }
-        trueStackSize = commandStack.size();
+        trueStackSize = this.getTrueStackSize();
         return prev != null;
     }
-
+//deal with these later
     @Override
     public void undo() throws IllegalStateException {
         if (commandStack.size() == 0) {
             throw new IllegalStateException("Nothing to undo");
         }
-        Command c = commandStack.pop();
+        Undoable c = commandStack.pop();
         c.undo();
     }
 
@@ -152,7 +171,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
         if (commandStack.size() == 0) {
             throw new IllegalStateException("Nothing to undo");
         }
-        StackImpl<Command> temp = new StackImpl<>();
+        StackImpl<Undoable> temp = new StackImpl<>();
         boolean found = false;
         while (!found) {
             //ensures that if its not found everything gets put back first before throwing, dont wanna break the system
@@ -162,9 +181,15 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
                 }
                 throw new IllegalStateException("URI is not represented in the command stack");
             }
-            if (commandStack.peek().getUri().equals(url)) {
+            //if its a single command check the uri, if not check if the uri is represented in the set. undo either way
+            if (commandStack.peek().getClass().equals(GenericCommand.class) && ((GenericCommand<URI>)commandStack.peek()).getTarget().equals(url)){
                 commandStack.pop().undo();
                 found = true;
+            } else if (commandStack.peek().getClass().equals(CommandSet.class) && ((CommandSet<URI>)commandStack.peek()).undo(url)){
+                found = true;
+                if(((CommandSet<URI>)commandStack.peek()).isEmpty()){
+                    commandStack.pop();
+                }
             } else {
                 temp.push(commandStack.pop());
             }
@@ -212,7 +237,13 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
             for (String s : words) {
                 wordTrie.delete(s, d);
             }
-            //gonna have to delete from metatrie if that becomes a thing
+            if (trueStackSize <= this.getTrueStackSize()) {
+                CommandSet<URI> c = new CommandSet<URI>();
+                for(Document doc: list){
+                    c.addCommand(new GenericCommand<URI>(doc.getKey(), (uri1) -> { docs.put(uri1, (DocumentImpl) doc); throwItIntoTheTrie(doc);}));
+                }
+            }
+            trueStackSize = this.getTrueStackSize();            //gonna have to delete from metatrie if that becomes a thing
         }
         return uris;
     }
