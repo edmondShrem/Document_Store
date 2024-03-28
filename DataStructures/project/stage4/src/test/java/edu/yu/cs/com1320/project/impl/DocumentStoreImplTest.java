@@ -2,6 +2,7 @@ package edu.yu.cs.com1320.project.impl;
 
 import edu.yu.cs.com1320.project.stage4.Document;
 import edu.yu.cs.com1320.project.stage4.DocumentStore;
+import edu.yu.cs.com1320.project.stage4.impl.DocumentImpl;
 import edu.yu.cs.com1320.project.stage4.impl.DocumentStoreImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -221,6 +222,9 @@ public class DocumentStoreImplTest {
         ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("3 shomie 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("crones 3 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones 3 7".getBytes()), uris[4], DocumentStore.DocumentFormat.BINARY);
+        ds.setMetadata(uris[4], "cactus", "juice");
+        ds.get(uris[4]).setMetadataValue("1" , "2");
         ds.setMetadata(uris[0], "cactus", "juice");
         ds.get(uris[0]).setMetadataValue("1" , "2");
         ds.setMetadata(uris[1], "cacti", "juices");
@@ -230,11 +234,12 @@ public class DocumentStoreImplTest {
         md.put("cactus", "juice");
         md.put("1", "2");
         List<Document> l = ds.searchByMetadata(md);
-        assertEquals(1, l.size());
+        assertEquals(2, l.size());
         assertTrue(l.contains(ds.get(uris[0])));
+        assertTrue(l.contains(ds.get(uris[4])));
         md = new HashMap<>();
         l = ds.searchByMetadata(md);
-        assertEquals(4, l.size());
+        assertEquals(5, l.size());
     }
     @Test
     void keywordmdsearchTest(){
@@ -331,6 +336,60 @@ public class DocumentStoreImplTest {
         assertNull(ds.get(uris[0]));
     }
     //undos -_-
+    @Test
+    void putUndoTestExtremeTrieEdition(){
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.undo(uris[2]);
+        assertEquals(3, ds.search("3").size());
+        ds.undo();
+        assertEquals(2, ds.search("3").size());
+        assertNotNull(ds.get(uris[0]));
+        assertNotNull(ds.get(uris[1]));
+    }
+    @Test
+    void DeleteUndoTestExtremeTrieEdition() throws URISyntaxException {
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.deleteAllWithPrefix("boi");
+        assertEquals(2, ds.search("3").size());
+        ds.undo(uris[1]);
+        assertEquals(3, ds.search("3").size());
+        beforeEach();
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.deleteAllWithPrefix("boi");
+        assertEquals(2, ds.search("3").size());
+        ds.undo();
+        assertEquals(4, ds.search("3").size());
+        beforeEach();
+        ds.put(new ByteArrayInputStream("3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.deleteAll("3");
+        assertEquals(0, ds.search("3").size());
+        ds.undo();
+        assertEquals(4, ds.search("3").size());
+        assertEquals(0, ds.deleteAllWithPrefix("").size());
+    }
+    @Test
+    void piazzaMadness(){
+        ds.put(new ByteArrayInputStream("app 3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("apple boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.deleteAllWithPrefix("app");
+        ds.undo(uris[1]);
+        assertNotNull(ds.get(uris[1]));
+        assertNull(ds.get(uris[0]));
 
+    }
 }
 

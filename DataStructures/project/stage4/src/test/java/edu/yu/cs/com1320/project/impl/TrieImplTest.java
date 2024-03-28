@@ -70,6 +70,10 @@ public class TrieImplTest {
         assertTrue(t.get("cooliotoolio").contains("3"));
         assertTrue(t.get("coolcoolmountain").contains("4"));
         assertEquals(t.get("wumbo"), new HashSet<String>());
+        assertThrows(IllegalArgumentException.class, () -> {
+            t.get(null);
+        });
+
     }
     @Test
     void getAllWithPrefixSortedTest(){

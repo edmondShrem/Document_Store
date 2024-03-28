@@ -185,7 +185,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
             if (commandStack.peek().getClass().equals(GenericCommand.class) && ((GenericCommand<URI>)commandStack.peek()).getTarget().equals(url)){
                 commandStack.pop().undo();
                 found = true;
-            } else if (commandStack.peek().getClass().equals(CommandSet.class) && ((CommandSet<URI>)commandStack.peek()).undo(url)){
+            } else if (commandStack.peek().getClass().equals(CommandSet.class) && ((CommandSet<URI>)(commandStack.peek())).undo(url)){
                 found = true;
                 if(((CommandSet<URI>)commandStack.peek()).isEmpty()){
                     commandStack.pop();
@@ -242,6 +242,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
                 for(Document doc: list){
                     c.addCommand(new GenericCommand<URI>(doc.getKey(), (uri1) -> { docs.put(uri1, (DocumentImpl) doc); throwItIntoTheTrie(doc);}));
                 }
+                commandStack.push(c);
             }
             trueStackSize = this.getTrueStackSize();            //gonna have to delete from metatrie if that becomes a thing
         }

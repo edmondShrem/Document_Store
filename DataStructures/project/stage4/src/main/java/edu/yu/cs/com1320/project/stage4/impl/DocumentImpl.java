@@ -134,6 +134,9 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
     }
     @Override
     public Set<String> getWords() {
+        if(this.binaryData != null){
+            return new HashSet<>();
+        }
         return wordCounts.keySet();
     }
 

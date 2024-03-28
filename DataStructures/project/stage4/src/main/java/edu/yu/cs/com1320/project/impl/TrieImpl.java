@@ -17,7 +17,7 @@ public class TrieImpl<Value> implements Trie<Value>{
         //deleteAll the value from this key
         if (val == null)
         {
-            this.deleteAll(key);
+            return;
         }
         else
         {
@@ -47,6 +47,9 @@ public class TrieImpl<Value> implements Trie<Value>{
 
     @Override
     public List<Value> getSorted(String key, Comparator<Value> comparator) {
+        if(key == null){
+            throw new IllegalArgumentException("null key");
+        }
         Set<Value> s = this.get(key);
         List<Value> l = this.getSortedList(s, comparator);
         return l;
@@ -76,6 +79,9 @@ public class TrieImpl<Value> implements Trie<Value>{
 
     @Override
     public Set<Value> get(String key) {
+        if(key == null){
+            throw new IllegalArgumentException("null key");
+        }
         //shallow copy?
         Node<Value> n = this.get(this.root, key, 0);
         if(n == null || n.vals == null){
@@ -107,6 +113,12 @@ public class TrieImpl<Value> implements Trie<Value>{
 
     @Override
     public List<Value> getAllWithPrefixSorted(String prefix, Comparator<Value> comparator) {
+        if(prefix == null || comparator == null){
+            throw new IllegalArgumentException("null prefix or comparator");
+        }
+        if(prefix.isEmpty()){
+            return new ArrayList<>();
+        }
         Node<Value> subRoot = this.get(this.root, prefix, 0);
         Set<Value> s = new HashSet<Value>();
         walkDownAndAdd(subRoot, s);
@@ -116,6 +128,12 @@ public class TrieImpl<Value> implements Trie<Value>{
 
     @Override
     public Set<Value> deleteAllWithPrefix(String prefix) {
+        if(prefix == null){
+            throw new IllegalArgumentException("null prefix");
+        }
+        if(prefix.isEmpty()){
+            return new HashSet<>();
+        }
         Node<Value> subRoot = this.get(this.root, prefix, 0);
         Set<Value> s = new HashSet<Value>();
         walkDownAndAdd(subRoot, s);
@@ -141,6 +159,9 @@ public class TrieImpl<Value> implements Trie<Value>{
 
     @Override
     public Set<Value> deleteAll(String key) {
+        if(key == null){
+            throw new IllegalArgumentException("null key");
+        }
         Node<Value> n = this.get(this.root, key, 0);
         Set<Value> s = this.get(key);
         n.vals = new HashSet<Value>();
@@ -156,7 +177,7 @@ public class TrieImpl<Value> implements Trie<Value>{
         }
         if (d == key.length())
         {
-            x.vals = null;
+            x.vals = new HashSet<Value>();
         }
         else
         {
@@ -167,7 +188,7 @@ public class TrieImpl<Value> implements Trie<Value>{
         {
             return x;
         }
-        for (int c = 0; c <TrieImpl.alphabetSize; c++)
+        for (int c = 0; c <alphabetSize; c++)
         {
             if (x.links[c] != null)
             {
@@ -179,6 +200,12 @@ public class TrieImpl<Value> implements Trie<Value>{
 
     @Override
     public Value delete(String key, Value val) {
+        if(key == null){
+            throw new IllegalArgumentException("null key");
+        }
+        if(val == null){
+            throw new IllegalArgumentException("null val");
+        }
         Node<Value> n = this.get(this.root, key, 0);
         if(n != null && n.vals.remove(val)){
             if(n.vals.isEmpty()){
@@ -192,7 +219,7 @@ public class TrieImpl<Value> implements Trie<Value>{
     private static class Node<Value>
     {
         public Set<Value> vals = new HashSet<>();
-        public Node[] links = new Node[TrieImpl.alphabetSize];
+        public Node[] links = new Node[256];
 
         }
 }
