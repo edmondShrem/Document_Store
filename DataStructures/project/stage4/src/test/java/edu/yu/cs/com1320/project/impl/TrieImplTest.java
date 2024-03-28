@@ -73,6 +73,7 @@ public class TrieImplTest {
         assertThrows(IllegalArgumentException.class, () -> {
             t.get(null);
         });
+        
 
     }
     @Test

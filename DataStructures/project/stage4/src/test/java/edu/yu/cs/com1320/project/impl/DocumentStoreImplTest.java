@@ -380,7 +380,7 @@ public class DocumentStoreImplTest {
         assertEquals(0, ds.deleteAllWithPrefix("").size());
     }
     @Test
-    void piazzaMadness(){
+    void piazzaMadness() throws URISyntaxException {
         ds.put(new ByteArrayInputStream("app 3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("apple boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
@@ -389,7 +389,13 @@ public class DocumentStoreImplTest {
         ds.undo(uris[1]);
         assertNotNull(ds.get(uris[1]));
         assertNull(ds.get(uris[0]));
-
+        beforeEach();
+        ds.put(new ByteArrayInputStream("app 3 boinnnnnnnnnnnn 3".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("apple boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("crones&".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
+        assertEquals("crones&", ds.get(uris[3]).getDocumentTxt());
     }
 }
 
