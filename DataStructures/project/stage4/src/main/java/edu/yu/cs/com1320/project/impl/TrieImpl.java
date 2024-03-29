@@ -220,6 +220,5 @@ public class TrieImpl<Value> implements Trie<Value>{
     {
         public Set<Value> vals = new HashSet<>();
         public Node[] links = new Node[256];
-
         }
 }

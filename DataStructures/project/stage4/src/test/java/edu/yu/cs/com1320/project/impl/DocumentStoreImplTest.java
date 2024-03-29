@@ -239,7 +239,7 @@ public class DocumentStoreImplTest {
         assertTrue(l.contains(ds.get(uris[4])));
         md = new HashMap<>();
         l = ds.searchByMetadata(md);
-        assertEquals(5, l.size());
+        assertEquals(0, l.size());
     }
     @Test
     void keywordmdsearchTest(){
@@ -348,6 +348,7 @@ public class DocumentStoreImplTest {
         assertEquals(2, ds.search("3").size());
         assertNotNull(ds.get(uris[0]));
         assertNotNull(ds.get(uris[1]));
+        assertNotNull(ds.get(uris[1]));
     }
     @Test
     void DeleteUndoTestExtremeTrieEdition() throws URISyntaxException {
@@ -396,6 +397,6 @@ public class DocumentStoreImplTest {
         ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("crones&".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
         assertEquals("crones&", ds.get(uris[3]).getDocumentTxt());
+        //comment so i can commit again :)
     }
 }
-

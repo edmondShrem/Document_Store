@@ -253,6 +253,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
     @Override
     public List<Document> searchByMetadata(Map<String, String> keysValues) {
         List<Document> list = new ArrayList<>();
+        if(keysValues.isEmpty()){
+            return list;
+        }
         for (Document d : docs.values()) {
             if (d.getMetadata().keySet().containsAll(keysValues.keySet()) ){
                     if(d.getMetadata().values().containsAll(keysValues.values())){
@@ -260,7 +263,6 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
                     }
                 }
             }
-
         return list;
     }
 
