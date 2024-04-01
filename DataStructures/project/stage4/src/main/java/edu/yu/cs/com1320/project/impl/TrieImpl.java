@@ -85,7 +85,6 @@ public class TrieImpl<Value> implements Trie<Value>{
         //shallow copy?
         Node<Value> n = this.get(this.root, key, 0);
         if(n == null || n.vals == null){
-            //assert false;
             return new HashSet<Value>();
         }
         Set<Value> s = n.vals;
@@ -142,8 +141,6 @@ public class TrieImpl<Value> implements Trie<Value>{
          for(int i = 0; i < alphabetSize; i++){
              subRoot.links[i] = null;
          }
-         assert this.get(this.root, prefix, 0).vals.isEmpty();
-        assert s.toArray()[0] != null;
         return s;
     }
     private void walkDownAndAdd(Node<Value> n, Set<Value>s){
@@ -166,7 +163,6 @@ public class TrieImpl<Value> implements Trie<Value>{
         Set<Value> s = this.get(key);
         n.vals = new HashSet<Value>();
         this.deleteAll(this.root, key, 0);
-        assert s != null;
         return s;
     }
 

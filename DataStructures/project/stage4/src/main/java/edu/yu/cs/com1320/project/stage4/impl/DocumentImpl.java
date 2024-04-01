@@ -34,7 +34,6 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
         String alphanumeric = "";
         for(String str : arr){
             alphanumeric = getAlphanumeric(str);
-            assert !alphanumeric.equals("");
             //the word already appears in the table
             if(wordCounts.containsKey(alphanumeric)){
                 int prev = wordCounts.get(alphanumeric);
@@ -124,11 +123,9 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage4.Document {
         //holds the alphanumeric version of the term
         String ANSearchTerm;
         ANSearchTerm = getAlphanumeric(word);
-        assert !ANSearchTerm.isEmpty();
        if(this.binaryData != null || this.wordCounts.get(ANSearchTerm) == null){
            return 0;
        } else {
-           assert this.wordCounts.get(ANSearchTerm) != 0;
            return this.wordCounts.get(ANSearchTerm);
        }
     }

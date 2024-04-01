@@ -101,8 +101,6 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage4.Docum
     private void throwItIntoTheTrie(Document d) {
         Set<String> set = d.getWords();
         for (String s : set) {
-            assert set != null;
-            assert d != null;
             wordTrie.put(s, d);
         }
     }
