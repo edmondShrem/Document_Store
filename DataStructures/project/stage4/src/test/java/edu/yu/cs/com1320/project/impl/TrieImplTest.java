@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TrieImplTest {
     TrieImpl<String> t;
     Comparator<String> comp;
+    Comparator<Integer> c;
     @BeforeEach
     void beforeEach(){
         t = new TrieImpl<>();
@@ -18,6 +19,12 @@ public class TrieImplTest {
                 return o1.compareTo(o2);
             }
         };
+         c = new Comparator<Integer>() {
+             @Override
+             public int compare(Integer o1, Integer o2) {
+                 return o1 - o2;
+             }
+         };
     }
     @Test
     void constructorTest(){
@@ -50,10 +57,20 @@ public class TrieImplTest {
         t.put("cool", "1");
         t.put("cool", null);
         t.put("coolio", "2");
-        t.put("cool", "1");
+        t.put("cool", "3");
+        t.put("cool", "4");
+        t.put("cool", "5");
+        t.put("cool", "6");
+        t.put("cool", "7");
         t.put("cooliotoolio", "3");
+        t.put("cooliotoolio", "424");
+        t.put("cooliotoolio", "123213");
         t.put("coolcoolmountain", "4");
         assertTrue(t.get("cool").contains("1"));
+        assertTrue(t.get("cool").contains("3"));
+        assertEquals(6, t.get("cool").size());
+        assertTrue(t.get("cool").contains("4"));
+        assertTrue(t.get("cool").contains("5"));
         assertTrue(t.get("coolio").contains("2"));
         assertTrue(t.get("cooliotoolio").contains("3"));
         assertTrue(t.get("coolcoolmountain").contains("4"));
@@ -94,6 +111,7 @@ public class TrieImplTest {
     }
     @Test
     void deleteTest(){
+        TrieImpl<String> t = this.t;
         t.put("cool", "1");
         t.put("cool", "6");
         t.put("cool", "12");
@@ -102,6 +120,8 @@ public class TrieImplTest {
         t.put("cooliotoolio", "3");
         t.put("coolcoolmountain", "4");
         assertEquals("1", t.delete("cool", "1"));
+        assertEquals("6", t.delete("cool", "6"));
+        assertEquals("12", t.delete("cool", "12"));
         assertNull(t.delete("cool", "1"));
         assertNull(t.delete("null", "1"));
         assertTrue(t.get("coolio").contains("1"));
@@ -115,7 +135,12 @@ public class TrieImplTest {
         t.put("coolio", "bohl");
         t.put("cooliotoolio", "3");
         t.put("coolcoolmountain", "4");
-        assertEquals(3, t.deleteAll("cool").size());
+        Set<String> s = t.deleteAll("cool");
+        assertEquals("1", s.toArray()[0]);
+        //assertEquals("6", s.toArray()[1]);
+        //assertEquals("12", s.toArray()[2]);
+        assertEquals(3, s.size());
+        assertTrue(t.get("cool").isEmpty());
         assertTrue(t.deleteAll("cool").isEmpty());
         assertTrue(t.get("coolio").contains("1"));
     }
@@ -134,5 +159,17 @@ public class TrieImplTest {
         assertFalse(t.get("coolio").contains("bohl"));
         assertFalse(t.get("cooliotoolio").contains("3"));
         assertTrue(t.get("cooliotoolio").isEmpty());
+    }
+    @Test
+    public void testPutAndGetAll() {
+        TrieImpl<Integer> ti = new TrieImpl<>();
+        ti.put("one", 11);
+        ti.put(  "one",  121);
+        ti.put(  "two",  2);
+        List<Integer> ones = ti.getSorted("one", c);
+        assertEquals( 2, ones.size(), "getAllSorted should've returned 2 results");
+        assertEquals( 121, ones.get(0),  "first element should be 121");
+
+        assertEquals(  11,ones.get(1),  "second element should be 11");
     }
 }

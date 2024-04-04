@@ -386,7 +386,7 @@ public class DocumentStoreImplTest {
         ds.put(new ByteArrayInputStream("apple boiedfjiov boisvnfoseuvnsfepibnsofn boid 3 7".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("33333 shomie 3 3".getBytes()), uris[2], DocumentStore.DocumentFormat.TXT);
         ds.put(new ByteArrayInputStream("33333 shomie 3 3 crones 7".getBytes()), uris[3], DocumentStore.DocumentFormat.TXT);
-        ds.deleteAllWithPrefix("app");
+        assertEquals(2, ds.deleteAllWithPrefix("app").size());
         ds.undo(uris[1]);
         assertNotNull(ds.get(uris[1]));
         assertNull(ds.get(uris[0]));
