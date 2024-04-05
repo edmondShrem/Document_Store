@@ -1,7 +1,11 @@
 package edu.yu.cs.com1320.project.stage5.impl;
 
 import edu.yu.cs.com1320.project.HashTable;
+//asl ant this
+import edu.yu.cs.com1320.project.MinHeap;
+import edu.yu.cs.com1320.project.Stack;
 import edu.yu.cs.com1320.project.impl.HashTableImpl;
+import edu.yu.cs.com1320.project.impl.MinHeapImpl;
 import edu.yu.cs.com1320.project.impl.StackImpl;
 import edu.yu.cs.com1320.project.impl.TrieImpl;
 import edu.yu.cs.com1320.project.stage5.Document;
@@ -18,12 +22,16 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     private HashTable<URI, DocumentImpl> docs;
     private TrieImpl<Document> wordTrie;
     private StackImpl<Undoable> commandStack;
+    private MinHeap<Document> timeHeap;
     private int trueStackSize;
+    private int maxDocs;
+    private int maxBytes;
 
     public DocumentStoreImpl() {
         this.docs = new HashTableImpl<>();
         this.commandStack = new StackImpl<>();
         this.wordTrie = new TrieImpl<>();
+        this.timeHeap = new MinHeapImpl();
         this.trueStackSize = 0;
     }
     private int getTrueStackSize(){
@@ -53,6 +61,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             commandStack.push(new GenericCommand<URI>(uri, (uri1) -> setMetadata(uri1, key, old)));
         }
         trueStackSize = this.getTrueStackSize();
+        this.docs.get(uri).setLastUseTime(System.nanoTime());
+        this.timeHeap.reHeapify(this.docs.get(uri));
         return this.docs.get(uri).setMetadataValue(key, value);
     }
 
@@ -61,6 +71,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || key == null || key.equals("") || docs.get(uri) == null) {
             throw new IllegalArgumentException("the uri is null or blank, if there is no document stored at that uri, or the key is null or blank");
         }
+        this.docs.get(uri).setLastUseTime(System.nanoTime());
+        this.timeHeap.reHeapify(this.docs.get(uri));
         return this.docs.get(uri).getMetadataValue(key);
     }
 
@@ -115,6 +127,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         } else {
             prev = docs.put(uri, new DocumentImpl(uri, bytes));
         }
+        this.docs.get(uri).setLastUseTime(System.nanoTime());
+        this.timeHeap.insert(this.docs.get(uri));
+        this.timeHeap.reHeapify(this.docs.get(uri));
         return prev;
     }
 
@@ -134,6 +149,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     @Override
     public Document get(URI url) {
+        this.docs.get(url).setLastUseTime(System.nanoTime());
+        this.timeHeap.reHeapify(this.docs.get(url));
         return docs.get(url);
     }
 
@@ -146,6 +163,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             for (String s : words) {
                 wordTrie.delete(s, prev);
             }
+            prev.setLastUseTime(-1);
+            this.timeHeap.reHeapify(prev);
+            this.timeHeap.remove();
         }
         if (trueStackSize <= this.getTrueStackSize() && prev != null) {
             commandStack.push(new GenericCommand<URI>(url, (uri1) -> { docs.put(uri1, prev); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
@@ -199,13 +219,23 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     @Override
     public List<Document> search(String keyword) {
         Comparator<Document> c = new docComp(keyword);
-        return wordTrie.getSorted(keyword, c);
+        List<Document> l = wordTrie.getSorted(keyword, c);
+        for(Document d : l){
+            d.setLastUseTime(System.nanoTime());
+            this.timeHeap.reHeapify(d);
+        }
+        return l;
     }
 
     @Override
     public List<Document> searchByPrefix(String keywordPrefix) {
         Comparator<Document> c = new preComp(keywordPrefix);
-        return wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
+        List<Document> l = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
+        for(Document d : l){
+            d.setLastUseTime(System.nanoTime());
+            this.timeHeap.reHeapify(d);
+        }
+        return l;
     }
 
     @Override
@@ -256,6 +286,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         for (Document d : docs.values()) {
             if (d.getMetadata().keySet().containsAll(keysValues.keySet()) ){
                     if(d.getMetadata().values().containsAll(keysValues.values())){
+                        d.setLastUseTime(System.nanoTime());
+                        this.timeHeap.reHeapify(d);
                         list.add(d);
                     }
                 }
@@ -280,6 +312,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         List<Document> toReturn = new ArrayList<Document>();
         for (Document d : byPrefix) {
             if (byMetaData.contains(d)) {
+                d.setLastUseTime(System.nanoTime());
+                this.timeHeap.reHeapify(d);
                 toReturn.add(d);
             }
         }
@@ -308,12 +342,82 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     @Override
     public void setMaxDocumentCount(int limit) {
-
+        int totalDocs = this.docs.size();
+        this.maxDocs = limit;
+        Document prev;
+        if(totalDocs > this.maxDocs){
+            while(totalDocs > maxDocs) {
+                cull();
+                totalDocs--;
+            }
+        }
     }
-
+    private void removeFromUndos(Document d){
+        URI uri = d.getKey();
+        Stack<Undoable> temp = new StackImpl<>();
+        Undoable next;
+        while(commandStack.size() > 0){
+        next = commandStack.pop();
+        if(next.getClass().equals(GenericCommand.class)){
+            if (!((GenericCommand)next).getTarget().equals(uri)){
+                temp.push(next);
+            } else {
+                next.undo();
+            }
+        }
+        else {
+            ((CommandSet)next).undo(uri);
+           }
+           if(!((CommandSet)next).isEmpty()){
+               temp.push(next);
+           }
+        }
+        while(temp.size() > 0){
+            commandStack.push(temp.pop());
+        }
+        this.trueStackSize = getTrueStackSize();
+    }
     @Override
     public void setMaxDocumentBytes(int limit) {
+        this.maxBytes = limit;
+        int currentBytes = this.getTotalBytes();
+        Document prev;
+        if(currentBytes > maxBytes){
+            while(currentBytes > maxBytes){
+                prev = cull();
+                if(prev.getDocumentTxt() != null){
+                    currentBytes -= prev.getDocumentTxt().getBytes().length;
+                } else {
+                    currentBytes -= prev.getDocumentBinaryData().length;
+                }
+            }
+        }
+    }
 
+    private Document cull() {
+        Document prev;
+        removeFromUndos(timeHeap.peek());
+        prev = timeHeap.peek();
+        Set<String> words = prev.getWords();
+        for (String s : words) {
+            wordTrie.delete(s, prev);
+        }
+        docs.put(prev.getKey(), null);
+        this.timeHeap.reHeapify(prev);
+        this.timeHeap.remove();
+        return prev;
+    }
+
+    private int getTotalBytes(){
+        int total = 0;
+        for(Document d:docs.values()){
+            if(d.getDocumentTxt() != null){
+                total += d.getDocumentTxt().getBytes().length;
+            } else {
+                total += d.getDocumentBinaryData().length;
+            }
+        }
+        return total;
     }
 
     private class docComp implements Comparator<Document> {

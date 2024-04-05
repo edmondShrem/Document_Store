@@ -17,6 +17,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
     private String text;
     private byte[] binaryData;
     private HashTable<String, Integer> wordCounts;
+    private long lastUsedTime;
     public DocumentImpl(URI uri, String txt) {
         if (uri == null || uri.getPath() == null || uri.getPath().isEmpty() || txt == null || txt.equals("")) {
             throw new IllegalArgumentException("One or more arguments were blank or null");
@@ -27,6 +28,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
         this.metaData = new HashTableImpl<>();
         this.wordCounts = new HashTableImpl<>();
         this.setWordTable();
+        this.setLastUseTime(System.nanoTime());
     }
     //48-57 = nums
     //65-90 = caps
@@ -85,6 +87,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
         this.wordCounts = new HashTableImpl<>();
         this.binaryData = binaryData;
         this.metaData = new HashTableImpl<>();
+        this.setLastUseTime(System.nanoTime());
     }
     @Override
     public String setMetadataValue(String key, String value) {
@@ -142,12 +145,12 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
 
     @Override
     public long getLastUseTime() {
-        return 0;
+        return lastUsedTime;
     }
 
     @Override
     public void setLastUseTime(long timeInNanoseconds) {
-
+        this.lastUsedTime = timeInNanoseconds;
     }
 
     @Override
@@ -170,14 +173,16 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
         if (o == this){
             return true;
         }
-        if(o.hashCode() == this.hashCode()){
-            return true;
-        }
-        return false;
+        return o.hashCode() == this.hashCode();
     }
 
     @Override
     public int compareTo(Document o) {
-        return 0;
+        if(this.getLastUseTime() == o.getLastUseTime()){
+            return 0;
+        } else if (this.getLastUseTime() > o.getLastUseTime()){
+            return 1;
+        }
+        return -1;
     }
 }
