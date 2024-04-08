@@ -11,16 +11,28 @@ public class MinHeapImpl extends MinHeap{
     }
     @Override
     public void reHeapify(Comparable element) {
-        if(getParent(element) != null && element.compareTo(getParent(element)) < 0){
-            this.upHeap(getArrayIndex(element));
-        } else if ((getRight(element) != null && element.compareTo(getRight(element)) > 0) || ( getLeft(element) != null && element.compareTo(getLeft(element)) > 0)){
-            this.downHeap(getArrayIndex(element));
-        }
+        upHeap(getArrayIndex(element));
+        downHeap(getArrayIndex(element));
+        //omg this is sp dumb
+      //  if(count <= 1){
+        //    return;
+        //}
+
+        //if(getArrayIndex(element) > 1 /*&& getParent(element) != null*/){
+           // assert getParent(element) != null;
+          //  this.upHeap(getArrayIndex(element));
+        //}  if ((getRight(element) != null && element.compareTo(getRight(element)) > 0) || ( getLeft(element) != null && element.compareTo(getLeft(element)) > 0)){
+          //  this.downHeap(getArrayIndex(element));
+        //}
     }
     /**
      *  returns the parent. if it's the root, return null.
      */
     private Comparable getParent(Comparable element){
+        if(getArrayIndex(element)  <= 1 /*|| this.elements[(getArrayIndex(element) - 1)/2] == null*/){
+
+            return null;
+        }
         return this.elements[(getArrayIndex(element) - 1)/2];
     }
     /**
@@ -46,8 +58,8 @@ public class MinHeapImpl extends MinHeap{
      */
     @Override
     protected int getArrayIndex(Comparable element) {
-        for(int i = 1; i < this.elements.length; i++){
-            if(this.elements[i].equals(element)){
+        for(int i = 0; i < this.elements.length; i++){
+            if(this.elements[i] != null && this.elements[i].equals(element)){
                 return i;
             }
         }

@@ -12,6 +12,7 @@ import edu.yu.cs.com1320.project.stage5.Document;
 import edu.yu.cs.com1320.project.undo.CommandSet;
 import edu.yu.cs.com1320.project.undo.GenericCommand;
 import edu.yu.cs.com1320.project.undo.Undoable;
+import org.ietf.jgss.GSSName;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +34,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         this.wordTrie = new TrieImpl<>();
         this.timeHeap = new MinHeapImpl();
         this.trueStackSize = 0;
+        maxBytes = Integer.MAX_VALUE;
+        maxDocs = Integer.MAX_VALUE;
     }
     private int getTrueStackSize(){
         int x = commandStack.size();
@@ -58,12 +61,13 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         }
         if (trueStackSize <= this.getTrueStackSize()) {
             String old = this.getMetadata(uri, key);
-            commandStack.push(new GenericCommand<URI>(uri, (uri1) -> setMetadata(uri1, key, old)));
+            commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {if(docs.get(uri1)!= null) docs.get(uri1).setMetadataValue(key, old);}));
         }
         trueStackSize = this.getTrueStackSize();
+        String old = this.docs.get(uri).setMetadataValue(key, value);
         this.docs.get(uri).setLastUseTime(System.nanoTime());
         this.timeHeap.reHeapify(this.docs.get(uri));
-        return this.docs.get(uri).setMetadataValue(key, value);
+        return old;
     }
 
     @Override
@@ -84,8 +88,12 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         if (input == null) {
             DocumentImpl prev = docs.get(uri);
             this.delete(uri);
-            if (trueStackSize <= this.getTrueStackSize()) {
-                commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { docs.put(uri1, prev); if (prev.getDocumentBinaryData() != null)throwItIntoTheTrie(prev);}));
+            if (trueStackSize <= this.getTrueStackSize() && prev != null) {
+                if(prev.getDocumentTxt() != null){
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                }else{
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                }
             }
             trueStackSize = this.getTrueStackSize();
             return (prev == null ? 0 : prev.hashCode());
@@ -99,12 +107,25 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
                 commandStack.push(new GenericCommand<URI>(uri, (uri1) -> delete(uri1)));
             }
             trueStackSize = this.getTrueStackSize();
+            if(getTotalBytes() > maxBytes || docs.size() > maxDocs) {
+                while (getTotalBytes() > maxBytes || docs.size() > maxDocs) {
+                    cull();
+                }
+            }
             return 0;
         } else {
             if (trueStackSize <= this.getTrueStackSize()) {
-                commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { docs.put(uri1, prev); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
-            }
+                if(prev.getDocumentTxt() != null){
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                }else{
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                }            }
             trueStackSize = this.getTrueStackSize();
+            if(getTotalBytes() > maxBytes || docs.size() > maxDocs) {
+                while (getTotalBytes() > maxBytes || docs.size() > maxDocs) {
+                    cull();
+                }
+            }
             return prev.hashCode();
         }
     }
@@ -120,14 +141,19 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         DocumentImpl prev;
         if (format == DocumentFormat.TXT) {
             DocumentImpl current = new DocumentImpl(uri, new String(bytes));
+            current.setLastUseTime(System.nanoTime());
             prev = docs.put(uri, null);
-            this.delete(uri);
+            //this.delete(uri);
             docs.put(uri, current);
             this.throwItIntoTheTrie(current);
         } else {
             prev = docs.put(uri, new DocumentImpl(uri, bytes));
         }
-        this.docs.get(uri).setLastUseTime(System.nanoTime());
+        if(prev != null){
+            prev.setLastUseTime(Integer.MIN_VALUE);
+            this.timeHeap.reHeapify(prev);
+            this.timeHeap.remove();
+        }
         this.timeHeap.insert(this.docs.get(uri));
         this.timeHeap.reHeapify(this.docs.get(uri));
         return prev;
@@ -149,8 +175,10 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     @Override
     public Document get(URI url) {
-        this.docs.get(url).setLastUseTime(System.nanoTime());
-        this.timeHeap.reHeapify(this.docs.get(url));
+        if(this.docs.get(url) != null){
+            this.docs.get(url).setLastUseTime(System.nanoTime());
+            this.timeHeap.reHeapify(this.docs.get(url));
+        }
         return docs.get(url);
     }
 
@@ -159,16 +187,21 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     public boolean delete(URI url) {
         DocumentImpl prev = docs.put(url, null);
         if (prev != null) {
+            prev.setLastUseTime(Integer.MIN_VALUE);
+            this.timeHeap.reHeapify(prev);
             Set<String> words = prev.getWords();
             for (String s : words) {
                 wordTrie.delete(s, prev);
             }
-            prev.setLastUseTime(-1);
-            this.timeHeap.reHeapify(prev);
+            assert prev == timeHeap.peek();
             this.timeHeap.remove();
         }
         if (trueStackSize <= this.getTrueStackSize() && prev != null) {
-            commandStack.push(new GenericCommand<URI>(url, (uri1) -> { docs.put(uri1, prev); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+            if(prev.getDocumentTxt() != null){
+            commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+            }else{
+                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+            }
         }
         trueStackSize = this.getTrueStackSize();
         return prev != null;
@@ -180,6 +213,19 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             throw new IllegalStateException("Nothing to undo");
         }
         Undoable c = commandStack.pop();
+        if(c.getClass().equals(GenericCommand.class)){
+            if(docs.get((URI)((GenericCommand)c).getTarget()) != null) {
+                docs.get((URI) ((GenericCommand) c).getTarget()).setLastUseTime(System.nanoTime());
+                timeHeap.reHeapify(docs.get((URI) ((GenericCommand) c).getTarget()));
+            }
+        } else {
+            for(Object g:((CommandSet)c)){
+                if(docs.get((URI)((GenericCommand)g).getTarget()) != null) {
+                    docs.get((URI) ((GenericCommand) g).getTarget()).setLastUseTime(System.nanoTime());
+                    timeHeap.reHeapify(docs.get((URI) ((GenericCommand) g).getTarget()));
+                }
+            }
+        }
         c.undo();
     }
 
@@ -200,10 +246,14 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             }
             //if its a single command check the uri, if not check if the uri is represented in the set. undo either way
             if (commandStack.peek().getClass().equals(GenericCommand.class) && ((GenericCommand<URI>)commandStack.peek()).getTarget().equals(url)){
+                docs.get(url).setLastUseTime(System.nanoTime());
+                timeHeap.reHeapify(docs.get(url));
                 commandStack.pop().undo();
                 found = true;
             } else if (commandStack.peek().getClass().equals(CommandSet.class) && ((CommandSet<URI>)(commandStack.peek())).undo(url)){
                 found = true;
+                docs.get(url).setLastUseTime(System.nanoTime());
+                timeHeap.reHeapify(docs.get(url));
                 if(((CommandSet<URI>)commandStack.peek()).isEmpty()){
                     commandStack.pop();
                 }
@@ -346,7 +396,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         this.maxDocs = limit;
         Document prev;
         if(totalDocs > this.maxDocs){
-            while(totalDocs > maxDocs) {
+            while(totalDocs > this.maxDocs) {
                 cull();
                 totalDocs--;
             }
@@ -354,6 +404,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     }
     private void removeFromUndos(Document d){
         URI uri = d.getKey();
+        this.docs.put(uri, null);
         Stack<Undoable> temp = new StackImpl<>();
         Undoable next;
         while(commandStack.size() > 0){
@@ -367,10 +418,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         }
         else {
             ((CommandSet)next).undo(uri);
-           }
+
            if(!((CommandSet)next).isEmpty()){
                temp.push(next);
-           }
+        }
+        }
         }
         while(temp.size() > 0){
             commandStack.push(temp.pop());
@@ -398,12 +450,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         Document prev;
         removeFromUndos(timeHeap.peek());
         prev = timeHeap.peek();
-        Set<String> words = prev.getWords();
-        for (String s : words) {
-            wordTrie.delete(s, prev);
-        }
-        docs.put(prev.getKey(), null);
-        this.timeHeap.reHeapify(prev);
+        //this.timeHeap.reHeapify(prev);
         this.timeHeap.remove();
         return prev;
     }

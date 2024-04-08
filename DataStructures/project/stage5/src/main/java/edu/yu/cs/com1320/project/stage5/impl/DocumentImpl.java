@@ -167,6 +167,9 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
     }
     @Override
     public boolean equals(Object o){
+        if(o == null){
+            return false;
+        }
         if (!(o instanceof DocumentImpl)){
             return false;
         }
