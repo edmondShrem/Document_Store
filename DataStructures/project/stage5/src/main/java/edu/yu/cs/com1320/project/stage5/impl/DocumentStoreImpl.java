@@ -75,9 +75,12 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || key == null || key.equals("") || docs.get(uri) == null) {
             throw new IllegalArgumentException("the uri is null or blank, if there is no document stored at that uri, or the key is null or blank");
         }
-        this.docs.get(uri).setLastUseTime(System.nanoTime());
-        this.timeHeap.reHeapify(this.docs.get(uri));
-        return this.docs.get(uri).getMetadataValue(key);
+        String val = this.docs.get(uri).getMetadataValue(key);
+        if(val != null) {
+            this.docs.get(uri).setLastUseTime(System.nanoTime());
+            this.timeHeap.reHeapify(this.docs.get(uri));
+        }
+        return val;
     }
 
     @Override
@@ -100,6 +103,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         }
         byte[] bytes;
         bytes = getBytes(input);
+        if(bytes.length > maxBytes){
+            throw new IllegalArgumentException("This document is over the memory limit: " + bytes.length + " > " + maxBytes);
+        }
         DocumentImpl prev;
         prev = putBasedOnFormat(uri, format, bytes);
         if (prev == null) {
@@ -139,6 +145,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     private DocumentImpl putBasedOnFormat(URI uri, DocumentFormat format, byte[] bytes) {
         DocumentImpl prev;
+        if(docs.size() >= maxDocs){
+            cull();
+        }
         if (format == DocumentFormat.TXT) {
             DocumentImpl current = new DocumentImpl(uri, new String(bytes));
             current.setLastUseTime(System.nanoTime());
@@ -193,7 +202,6 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             for (String s : words) {
                 wordTrie.delete(s, prev);
             }
-            assert prev == timeHeap.peek();
             this.timeHeap.remove();
         }
         if (trueStackSize <= this.getTrueStackSize() && prev != null) {
@@ -246,14 +254,21 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             }
             //if its a single command check the uri, if not check if the uri is represented in the set. undo either way
             if (commandStack.peek().getClass().equals(GenericCommand.class) && ((GenericCommand<URI>)commandStack.peek()).getTarget().equals(url)){
-                docs.get(url).setLastUseTime(System.nanoTime());
-                timeHeap.reHeapify(docs.get(url));
                 commandStack.pop().undo();
+                if(docs.get(url) != null) {
+                    docs.get(url).setLastUseTime(System.nanoTime());
+                    timeHeap.reHeapify(docs.get(url));
+                }
+                /////
                 found = true;
-            } else if (commandStack.peek().getClass().equals(CommandSet.class) && ((CommandSet<URI>)(commandStack.peek())).undo(url)){
+            } else if (commandStack.peek().getClass().equals(CommandSet.class) && ((CommandSet<URI>)(commandStack.peek())).containsTarget(url)){
                 found = true;
-                docs.get(url).setLastUseTime(System.nanoTime());
-                timeHeap.reHeapify(docs.get(url));
+                ((CommandSet<URI>)(commandStack.peek())).undo(url);
+                if(docs.get(url) != null) {
+                    docs.get(url).setLastUseTime(System.nanoTime());
+                    timeHeap.reHeapify(docs.get(url));
+                }
+               ////
                 if(((CommandSet<URI>)commandStack.peek()).isEmpty()){
                     commandStack.pop();
                 }
@@ -299,6 +314,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     public Set<URI> deleteAllWithPrefix(String keywordPrefix) {
         Comparator<Document> c = new preComp(keywordPrefix);
         List<Document> list = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
+
         return deleteAllAndGetUris(list);
     }
 
@@ -317,11 +333,27 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             if (trueStackSize <= this.getTrueStackSize()) {
                 CommandSet<URI> c = new CommandSet<URI>();
                 for(Document doc: list){
-                    c.addCommand(new GenericCommand<URI>(doc.getKey(), (uri1) -> { docs.put(uri1, (DocumentImpl) doc); throwItIntoTheTrie(doc);}));
+                    c.addCommand(new GenericCommand<URI>(doc.getKey(), (uri1) -> {
+                        if(((Document)doc).getDocumentTxt() != null) {
+                            if(doc.getDocumentTxt().getBytes().length > maxBytes){
+                                throw new IllegalArgumentException();
+                            }
+                            if (docs.size() >= maxDocs){
+                                cull();
+                            }
+                            this.putBasedOnFormat(uri1, DocumentFormat.TXT, doc.getDocumentTxt().getBytes());
+                            throwItIntoTheTrie(doc);
+                        } else {
+                            this.putBasedOnFormat(uri1, DocumentFormat.BINARY, doc.getDocumentBinaryData());
+                        }
+                    }));
                 }
                 commandStack.push(c);
             }
-            trueStackSize = this.getTrueStackSize();            //gonna have to delete from metatrie if that becomes a thing
+            trueStackSize = this.getTrueStackSize();
+            d.setLastUseTime(Integer.MIN_VALUE);
+            timeHeap.reHeapify(d);
+            timeHeap.remove();//gonna have to delete from metatrie if that becomes a thing
         }
         return uris;
     }
@@ -347,21 +379,30 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     @Override
     public List<Document> searchByKeywordAndMetadata(String keyword, Map<String, String> keysValues) {
-        List<Document> byKeyWord = this.search(keyword);
-        return getMetaIntersections(keysValues, byKeyWord);
+        Comparator<Document> c = new docComp(keyword);
+        List<Document> l = wordTrie.getSorted(keyword, c);
+        return getMetaIntersections(keysValues, l);
     }
 
     @Override
     public List<Document> searchByPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) {
-        List<Document> byPrefix = this.searchByPrefix(keywordPrefix);
+        Comparator<Document> c = new preComp(keywordPrefix);
+        List<Document> byPrefix = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
         return getMetaIntersections(keysValues, byPrefix);
     }
 
     private List<Document> getMetaIntersections(Map<String, String> keysValues, List<Document> byPrefix) {
-        List<Document> byMetaData = this.searchByMetadata(keysValues);
+        List<Document> byMetadata = new ArrayList<>();
+        for (Document d : docs.values()) {
+            if (d.getMetadata().keySet().containsAll(keysValues.keySet()) ){
+                if(d.getMetadata().values().containsAll(keysValues.values())){
+                    byMetadata.add(d);
+                }
+            }
+        }
         List<Document> toReturn = new ArrayList<Document>();
         for (Document d : byPrefix) {
-            if (byMetaData.contains(d)) {
+            if (byMetadata.contains(d)) {
                 d.setLastUseTime(System.nanoTime());
                 this.timeHeap.reHeapify(d);
                 toReturn.add(d);
@@ -373,20 +414,25 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     @Override
     public Set<URI> deleteAllWithMetadata(Map<String, String> keysValues) {
         List<Document> toDelete = this.searchByMetadata(keysValues);
+
         return deleteAllAndGetUris(toDelete);
     }
 
     @Override
     public Set<URI> deleteAllWithKeywordAndMetadata(String keyword, Map<String, String> keysValues) {
-        List<Document> toDeleteKeyword = this.search(keyword);
+        Comparator<Document> c = new docComp(keyword);
+        List<Document> toDeleteKeyword = wordTrie.getSorted(keyword, c);
         List<Document> toDelete = getMetaIntersections(keysValues, toDeleteKeyword);
+
         return deleteAllAndGetUris(toDelete);
     }
 
     @Override
     public Set<URI> deleteAllWithPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) {
-        List<Document> toDeletePrefix = this.searchByPrefix(keywordPrefix);
-        List<Document> toDelete = getMetaIntersections(keysValues, toDeletePrefix);
+        Comparator<Document> c = new preComp(keywordPrefix);
+        List<Document> byPrefix = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
+        List<Document> toDelete = getMetaIntersections(keysValues, byPrefix);
+
         return deleteAllAndGetUris(toDelete);
     }
 
@@ -448,10 +494,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     private Document cull() {
         Document prev;
-        removeFromUndos(timeHeap.peek());
+
         prev = timeHeap.peek();
         //this.timeHeap.reHeapify(prev);
         this.timeHeap.remove();
+        removeFromUndos(prev);
         return prev;
     }
 

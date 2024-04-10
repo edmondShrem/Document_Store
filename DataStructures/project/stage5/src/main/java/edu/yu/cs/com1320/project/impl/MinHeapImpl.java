@@ -13,17 +13,6 @@ public class MinHeapImpl extends MinHeap{
     public void reHeapify(Comparable element) {
         upHeap(getArrayIndex(element));
         downHeap(getArrayIndex(element));
-        //omg this is sp dumb
-      //  if(count <= 1){
-        //    return;
-        //}
-
-        //if(getArrayIndex(element) > 1 /*&& getParent(element) != null*/){
-           // assert getParent(element) != null;
-          //  this.upHeap(getArrayIndex(element));
-        //}  if ((getRight(element) != null && element.compareTo(getRight(element)) > 0) || ( getLeft(element) != null && element.compareTo(getLeft(element)) > 0)){
-          //  this.downHeap(getArrayIndex(element));
-        //}
     }
     /**
      *  returns the parent. if it's the root, return null.

@@ -18,6 +18,5 @@ public class minHeapImplTest {
         h.insert("b");
         h.insert("c");
         h.insert("d");
-
     }
 }

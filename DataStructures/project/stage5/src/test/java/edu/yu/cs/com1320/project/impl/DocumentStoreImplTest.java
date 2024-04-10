@@ -1,7 +1,9 @@
 package edu.yu.cs.com1320.project.impl;
 
+import edu.yu.cs.com1320.project.HashTable;
 import edu.yu.cs.com1320.project.stage5.Document;
 import edu.yu.cs.com1320.project.stage5.DocumentStore;
+import edu.yu.cs.com1320.project.stage5.impl.DocumentImpl;
 import edu.yu.cs.com1320.project.stage5.impl.DocumentStoreImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -631,6 +633,273 @@ public class DocumentStoreImplTest {
         for(int i =0; i < 5; i++){
             ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
         }
-
+        ds.search("badaba");
+        ds.setMaxDocumentCount(5);
+        assertNull(ds.get(uris[0]));
+        assertNull(ds.get(uris[1]));
+        assertNull(ds.get(uris[2]));
+        assertNull(ds.get(uris[3]));
+        assertNull(ds.get(uris[4]));
+        assertNotNull(ds.get(uris[5]));
+        assertNotNull(ds.get(uris[6]));
+        assertNotNull(ds.get(uris[7]));
+        assertNotNull(ds.get(uris[8]));
+        assertNotNull(ds.get(uris[9]));
+    }
+    @Test
+    void prefixSearchHeap(){
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.searchByPrefix("bad");
+        ds.setMaxDocumentCount(5);
+        assertNull(ds.get(uris[0]));
+        assertNull(ds.get(uris[1]));
+        assertNull(ds.get(uris[2]));
+        assertNull(ds.get(uris[3]));
+        assertNull(ds.get(uris[4]));
+        assertNotNull(ds.get(uris[5]));
+        assertNotNull(ds.get(uris[6]));
+        assertNotNull(ds.get(uris[7]));
+        assertNotNull(ds.get(uris[8]));
+        assertNotNull(ds.get(uris[9]));
+    }
+    @Test
+    void bulkDeleteUndoHeaperJeaper(){
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.deleteAll("badaba");
+        ds.undo();
+        ds.setMaxDocumentCount(5);
+        assertNull(ds.get(uris[0]));
+        assertNull(ds.get(uris[1]));
+        assertNull(ds.get(uris[2]));
+        assertNull(ds.get(uris[3]));
+        assertNull(ds.get(uris[4]));
+        assertNotNull(ds.get(uris[5]));
+        assertNotNull(ds.get(uris[6]));
+        assertNotNull(ds.get(uris[7]));
+        assertNotNull(ds.get(uris[8]));
+        assertNotNull(ds.get(uris[9]));
+    }
+    @Test
+    void metaSearchHeap(){
+        for(int i =0; i < 10; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMetadata(uris[9], "wumm", "bo");
+        ds.setMetadata(uris[8], "wumm", "bo");
+        ds.setMetadata(uris[7], "wum", "bo");
+        ds.setMetadata(uris[6], "wumm", "bo");
+        ds.setMetadata(uris[5], "wum", "bo");
+        ds.setMetadata(uris[4], "wumm", "bo");
+        ds.setMetadata(uris[3], "wum", "bo");
+        ds.setMetadata(uris[2], "wumm", "bo");
+        ds.setMetadata(uris[1], "wum", "bo");
+        ds.setMetadata(uris[0], "wum", "bo");
+        HashMap<String, String> h = new HashMap<>();
+        h.put("wum", "bo");
+        ds.searchByMetadata(h);
+        ds.setMaxDocumentCount(6);
+        assertNull(ds.get(uris[9]));
+        assertNull(ds.get(uris[8]));
+        assertNull(ds.get(uris[6]));
+        assertNull(ds.get(uris[4]));
+    }
+    @Test
+    void KWandMDSearchHeap(){
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMetadata(uris[9], "wumm", "bo");
+        ds.setMetadata(uris[8], "wumm", "bo");
+        ds.setMetadata(uris[7], "wum", "bo");
+        ds.setMetadata(uris[6], "wumm", "bo");
+        ds.setMetadata(uris[5], "wum", "bo");
+        ds.setMetadata(uris[4], "wumm", "bo");
+        ds.setMetadata(uris[3], "wum", "bo");
+        ds.setMetadata(uris[2], "wumm", "bo");
+        ds.setMetadata(uris[1], "wum", "bo");
+        ds.setMetadata(uris[0], "wum", "bo");
+        HashMap<String, String> h = new HashMap<>();
+        h.put("wum", "bo");
+        ds.searchByKeywordAndMetadata("badaba", h);
+        ds.setMaxDocumentCount(2);
+        assertNotNull(ds.get(uris[7]));
+        assertNotNull(ds.get(uris[5]));
+    }
+    @Test
+    void searchPrefMet(){
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMetadata(uris[9], "wumm", "bo");
+        ds.setMetadata(uris[8], "wumm", "bo");
+        ds.setMetadata(uris[7], "wum", "bo");
+        ds.setMetadata(uris[6], "wumm", "bo");
+        ds.setMetadata(uris[5], "wum", "bo");
+        ds.setMetadata(uris[4], "wumm", "bo");
+        ds.setMetadata(uris[3], "wum", "bo");
+        ds.setMetadata(uris[2], "wumm", "bo");
+        ds.setMetadata(uris[1], "wum", "bo");
+        ds.setMetadata(uris[0], "wum", "bo");
+        HashMap<String, String> h = new HashMap<>();
+        h.put("wum", "bo");
+        ds.searchByPrefixAndMetadata("bad", h);
+        ds.setMaxDocumentCount(2);
+        assertNotNull(ds.get(uris[7]));
+        assertNotNull(ds.get(uris[5]));
+    }
+    @Test
+    void oneByOne(){
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMetadata(uris[9], "wumm", "bo");
+        ds.setMetadata(uris[8], "wumm", "bo");
+        ds.setMetadata(uris[7], "wum", "bo");
+        ds.setMetadata(uris[6], "wumm", "bo");
+        ds.setMetadata(uris[5], "wum", "bo");
+        ds.setMetadata(uris[4], "wumm", "bo");
+        ds.setMetadata(uris[3], "wum", "bo");
+        ds.setMetadata(uris[2], "wumm", "bo");
+        ds.setMetadata(uris[1], "wum", "bo");
+        ds.setMetadata(uris[0], "wum", "bo");
+        HashMap<String, String> h = new HashMap<>();
+        h.put("wum", "bo");
+        ds.searchByPrefixAndMetadata("bad", h);
+        ds.setMaxDocumentCount(9);
+        assertNull(ds.get(uris[9]));
+        ds.setMaxDocumentCount(8);
+        assertNull(ds.get(uris[8]));
+        ds.setMaxDocumentCount(7);
+        assertNull(ds.get(uris[6]));
+        ds.setMaxDocumentCount(6);
+        assertNull(ds.get(uris[4]));
+        ds.setMaxDocumentCount(5);
+        assertNull(ds.get(uris[3]));
+        ds.setMaxDocumentCount(4);
+        assertNull(ds.get(uris[2]));
+        ds.setMaxDocumentCount(3);
+        assertNull(ds.get(uris[1]));
+        ds.setMaxDocumentCount(2);
+        assertNull(ds.get(uris[0]));
+        ds.setMaxDocumentCount(1);
+        assertNull(ds.get(uris[5]));
+        ds.setMaxDocumentCount(0);
+        assertNull(ds.get(uris[7]));
+    }
+    //gotta do the last deletes
+    @Test
+    void deleteMetaTest(){
+        for(int i =0; i < 10; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMetadata(uris[9], "wumm", "bo");
+        ds.setMetadata(uris[8], "wumm", "bo");
+        ds.setMetadata(uris[7], "wum", "bo");
+        ds.setMetadata(uris[6], "wumm", "bo");
+        ds.setMetadata(uris[5], "wum", "bo");
+        ds.setMetadata(uris[4], "wumm", "bo");
+        ds.setMetadata(uris[3], "wum", "bo");
+        ds.setMetadata(uris[2], "wumm", "bo");
+        ds.setMetadata(uris[1], "wum", "bo");
+        ds.setMetadata(uris[0], "wum", "bo");
+        HashMap<String, String> h = new HashMap<>();
+        h.put("wum", "bo");
+        ds.deleteAllWithMetadata(h);
+        ds.undo();
+        ds.setMaxDocumentCount(6);
+        assertNull(ds.get(uris[9]));
+        assertNull(ds.get(uris[8]));
+        assertNull(ds.get(uris[6]));
+        assertNull(ds.get(uris[4]));
+    }
+    @Test
+    void pushItToTheLimit() throws URISyntaxException {
+        i = new ByteArrayInputStream("egouvnbuioghwioolgnsrolgnobnwsginwgnspbnwgpnipgnrawgjnwagjbesfpbnjnswnjgwsbspgbjsjbgoawjgbwsjbgwsjbswjbwsjbwghniognseognesuognhw".getBytes());
+        ds.setMaxDocumentBytes(100);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ds.put(i, new URI("file:///cheese/grapeSoda"), DocumentStore.DocumentFormat.TXT);
+        });
+    }
+    @Test
+    void deleteKWMD(){
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMetadata(uris[9], "wumm", "bo");
+        ds.setMetadata(uris[8], "wumm", "bo");
+        ds.setMetadata(uris[7], "wum", "bo");
+        ds.setMetadata(uris[6], "wumm", "bo");
+        ds.setMetadata(uris[5], "wum", "bo");
+        ds.setMetadata(uris[4], "wumm", "bo");
+        ds.setMetadata(uris[3], "wum", "bo");
+        ds.setMetadata(uris[2], "wumm", "bo");
+        ds.setMetadata(uris[1], "wum", "bo");
+        ds.setMetadata(uris[0], "wum", "bo");
+        HashMap<String, String> h = new HashMap<>();
+        h.put("wum", "bo");
+        ds.deleteAllWithKeywordAndMetadata("badaba", h);
+        ds.undo();
+        ds.setMaxDocumentCount(2);
+        assertNotNull(ds.get(uris[7]));
+        assertNotNull(ds.get(uris[5]));
+    }
+    @Test
+    void DDDthatsthenameyoushouldknowmetaprefix(){
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("doc " + (i)).getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream(("badaba").getBytes()), uris[i + 5], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMetadata(uris[9], "wumm", "bo");
+        ds.setMetadata(uris[8], "wumm", "bo");
+        ds.setMetadata(uris[7], "wum", "bo");
+        ds.setMetadata(uris[6], "wumm", "bo");
+        ds.setMetadata(uris[5], "wum", "bo");
+        ds.setMetadata(uris[4], "wumm", "bo");
+        ds.setMetadata(uris[3], "wum", "bo");
+        ds.setMetadata(uris[2], "wumm", "bo");
+        ds.setMetadata(uris[1], "wum", "bo");
+        ds.setMetadata(uris[0], "wum", "bo");
+        HashMap<String, String> h = new HashMap<>();
+        h.put("wum", "bo");
+        ds.deleteAllWithPrefixAndMetadata("bad", h);
+        ds.undo();
+        ds.setMaxDocumentCount(2);
+        assertNotNull(ds.get(uris[7]));
+        assertNotNull(ds.get(uris[5]));
+    }
+    @Test
+    void piazzaIsTheWorstThingEver() throws URISyntaxException {
+        for(int i =0; i < 5; i++){
+            ds.put(new ByteArrayInputStream("doc".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.deleteAll("doc");
+        ds.setMaxDocumentCount(3);
+        ds.undo(uris[0]);
+        ds.undo();
+        assertNull(ds.get(uris[1]));
     }
 }
