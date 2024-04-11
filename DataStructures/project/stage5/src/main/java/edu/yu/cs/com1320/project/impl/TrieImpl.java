@@ -66,7 +66,7 @@ public class TrieImpl<Value> implements Trie<Value>{
             largest = arr[i];
             largeI = i;
             for(int j = i; j < arr.length; j++){
-                if(comparator.compare(largest, arr[j]) < 0){
+                if(comparator.compare(largest, arr[j]) > 0){
                     largeI = j;
                 }
             }

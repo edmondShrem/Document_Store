@@ -217,19 +217,20 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 //deal with these later
     @Override
     public void undo() throws IllegalStateException {
+        long time = System.nanoTime();
         if (commandStack.size() == 0) {
             throw new IllegalStateException("Nothing to undo");
         }
         Undoable c = commandStack.pop();
         if(c.getClass().equals(GenericCommand.class)){
             if(docs.get((URI)((GenericCommand)c).getTarget()) != null) {
-                docs.get((URI) ((GenericCommand) c).getTarget()).setLastUseTime(System.nanoTime());
+                docs.get((URI) ((GenericCommand) c).getTarget()).setLastUseTime(time);
                 timeHeap.reHeapify(docs.get((URI) ((GenericCommand) c).getTarget()));
             }
         } else {
             for(Object g:((CommandSet)c)){
                 if(docs.get((URI)((GenericCommand)g).getTarget()) != null) {
-                    docs.get((URI) ((GenericCommand) g).getTarget()).setLastUseTime(System.nanoTime());
+                    docs.get((URI) ((GenericCommand) g).getTarget()).setLastUseTime(time);
                     timeHeap.reHeapify(docs.get((URI) ((GenericCommand) g).getTarget()));
                 }
             }
@@ -239,6 +240,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     @Override
     public void undo(URI url) throws IllegalStateException {
+        long time = System.nanoTime();
         if (commandStack.size() == 0) {
             throw new IllegalStateException("Nothing to undo");
         }
@@ -256,7 +258,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
             if (commandStack.peek().getClass().equals(GenericCommand.class) && ((GenericCommand<URI>)commandStack.peek()).getTarget().equals(url)){
                 commandStack.pop().undo();
                 if(docs.get(url) != null) {
-                    docs.get(url).setLastUseTime(System.nanoTime());
+                    docs.get(url).setLastUseTime(time);
                     timeHeap.reHeapify(docs.get(url));
                 }
                 /////
@@ -265,7 +267,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
                 found = true;
                 ((CommandSet<URI>)(commandStack.peek())).undo(url);
                 if(docs.get(url) != null) {
-                    docs.get(url).setLastUseTime(System.nanoTime());
+                    docs.get(url).setLastUseTime(time);
                     timeHeap.reHeapify(docs.get(url));
                 }
                ////
@@ -283,10 +285,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     @Override
     public List<Document> search(String keyword) {
+        long time = System.nanoTime();
         Comparator<Document> c = new docComp(keyword);
         List<Document> l = wordTrie.getSorted(keyword, c);
         for(Document d : l){
-            d.setLastUseTime(System.nanoTime());
+            d.setLastUseTime(time);
             this.timeHeap.reHeapify(d);
         }
         return l;
@@ -294,10 +297,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
 
     @Override
     public List<Document> searchByPrefix(String keywordPrefix) {
+        long time = System.nanoTime();
         Comparator<Document> c = new preComp(keywordPrefix);
         List<Document> l = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
         for(Document d : l){
-            d.setLastUseTime(System.nanoTime());
+            d.setLastUseTime(time);
             this.timeHeap.reHeapify(d);
         }
         return l;
@@ -361,6 +365,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     //there's a better way to do this but i also need to finish. wooo ;-;
     @Override
     public List<Document> searchByMetadata(Map<String, String> keysValues) {
+        long time = System.nanoTime();
         List<Document> list = new ArrayList<>();
         if(keysValues.isEmpty()){
             return list;
@@ -368,7 +373,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         for (Document d : docs.values()) {
             if (d.getMetadata().keySet().containsAll(keysValues.keySet()) ){
                     if(d.getMetadata().values().containsAll(keysValues.values())){
-                        d.setLastUseTime(System.nanoTime());
+                        d.setLastUseTime(time);
                         this.timeHeap.reHeapify(d);
                         list.add(d);
                     }
@@ -392,6 +397,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
     }
 
     private List<Document> getMetaIntersections(Map<String, String> keysValues, List<Document> byPrefix) {
+        long time = System.nanoTime();
         List<Document> byMetadata = new ArrayList<>();
         for (Document d : docs.values()) {
             if (d.getMetadata().keySet().containsAll(keysValues.keySet()) ){
@@ -403,7 +409,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         List<Document> toReturn = new ArrayList<Document>();
         for (Document d : byPrefix) {
             if (byMetadata.contains(d)) {
-                d.setLastUseTime(System.nanoTime());
+                d.setLastUseTime(time);
                 this.timeHeap.reHeapify(d);
                 toReturn.add(d);
             }
@@ -524,9 +530,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
         @Override
         public int compare(Document o1, Document o2) {
             if (o1.wordCount(comper) > o2.wordCount(comper)) {
-                return 1;
-            } else if (o1.wordCount(comper) < o2.wordCount(comper)) {
                 return -1;
+            } else if (o1.wordCount(comper) < o2.wordCount(comper)) {
+                return 1;
             } else {
                 return 0;
             }
@@ -552,7 +558,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage5.Docum
                     d2C += o2.wordCount(s);
                 }
             }
-            return  d1C - d2C;
+            return  d2C - d1C;
         }
     }
 }

@@ -19,13 +19,13 @@ public class TrieImplTest {
          comp = new Comparator<String>() {
             @Override
             public int compare(String o1, String o2) {
-                return o1.compareTo(o2);
+                return o2.compareTo(o1);
             }
         };
          c = new Comparator<Integer>() {
              @Override
              public int compare(Integer o1, Integer o2) {
-                 return o1 - o2;
+                 return o2 - o1;
              }
          };
     }
