@@ -1,8 +1,7 @@
 package edu.yu.cs.com1320.project.stage6.impl;
 
-import edu.yu.cs.com1320.project.HashTable;
-import edu.yu.cs.com1320.project.impl.HashTableImpl;
-import edu.yu.cs.com1320.project.stage5.Document;
+import edu.yu.cs.com1320.project.stage6.Document;
+import java.util.HashMap;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -10,13 +9,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
-    private HashTable<String, String> metaData;
-    private HashTable<String, String> copy;
+public class DocumentImpl implements edu.yu.cs.com1320.project.stage6.Document {
+    private HashMap<String, String> metaData;
+    private HashMap<String, String> copy;
     private URI uri;
     private String text;
     private byte[] binaryData;
-    private HashTable<String, Integer> wordCounts;
+    private HashMap<String, Integer> wordCounts;
     private long lastUsedTime;
     public DocumentImpl(URI uri, String txt) {
         if (uri == null || uri.getPath() == null || uri.getPath().isEmpty() || txt == null || txt.equals("")) {
@@ -25,8 +24,8 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
         this.uri = uri;
         this.text = txt;
         this.binaryData = null;
-        this.metaData = new HashTableImpl<>();
-        this.wordCounts = new HashTableImpl<>();
+        this.metaData = new HashMap<>();
+        this.wordCounts = new HashMap<>();
         this.setWordTable();
         this.setLastUseTime(System.nanoTime());
     }
@@ -84,9 +83,9 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
         }
         this.uri = uri;
         this.text = null;
-        this.wordCounts = new HashTableImpl<>();
+        this.wordCounts = new HashMap<>();
         this.binaryData = binaryData;
-        this.metaData = new HashTableImpl<>();
+        this.metaData = new HashMap<>();
         this.setLastUseTime(System.nanoTime());
     }
     @Override
@@ -106,13 +105,18 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
     }
 
     @Override
-    public HashTable<String, String> getMetadata() {
-        copy = new HashTableImpl<String, String>();
+    public HashMap<String, String> getMetadata() {
+        copy = new HashMap<>();
         Set<String> keys = metaData.keySet();
         for(String k : keys){
             copy.put(k, metaData.get(k));
         }
         return copy;
+    }
+
+    @Override
+    public void setMetadata(HashMap<String, String> metadata) {
+        this.metaData = metadata;
     }
 
     public String getDocumentTxt() {
@@ -151,6 +155,16 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage5.Document {
     @Override
     public void setLastUseTime(long timeInNanoseconds) {
         this.lastUsedTime = timeInNanoseconds;
+    }
+
+    @Override
+    public HashMap<String, Integer> getWordMap() {
+        return wordCounts;
+    }
+
+    @Override
+    public void setWordMap(HashMap<String, Integer> wordMap) {
+        this.wordCounts = wordMap;
     }
 
     @Override
