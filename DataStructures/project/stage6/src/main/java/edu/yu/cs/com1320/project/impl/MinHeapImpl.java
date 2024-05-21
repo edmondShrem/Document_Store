@@ -4,20 +4,21 @@ import edu.yu.cs.com1320.project.MinHeap;
 
 import java.util.NoSuchElementException;
 
-public class MinHeapImpl extends MinHeap{
+public class MinHeapImpl<E extends Comparable<E>> extends MinHeap<E> {
 
     public MinHeapImpl(){
-        this.elements = new Comparable[4];
+        Comparable<?>[] c =(new Comparable[4]);
+        this.elements = (E[])(Comparable<E>[])(c);
     }
     @Override
-    public void reHeapify(Comparable element) {
+    public void reHeapify(E element) {
         upHeap(getArrayIndex(element));
         downHeap(getArrayIndex(element));
     }
     /**
      *  returns the parent. if it's the root, return null.
      */
-    private Comparable getParent(Comparable element){
+    private E getParent(E element){
         if(getArrayIndex(element)  <= 1 /*|| this.elements[(getArrayIndex(element) - 1)/2] == null*/){
 
             return null;
@@ -27,7 +28,7 @@ public class MinHeapImpl extends MinHeap{
     /**
      *  returns the right child. if it's a leaf, return null.
      */
-    private Comparable getRight (Comparable element){
+    private E getRight (E element){
         if(2*getArrayIndex(element) + 2 >= this.elements.length){
             return null;
         }
@@ -36,7 +37,7 @@ public class MinHeapImpl extends MinHeap{
     /**
      *  returns the left child. if it's a leaf, return null.
      */
-    private Comparable getLeft(Comparable element){
+    private E getLeft(E element){
         if(2*getArrayIndex(element) + 1 >= this.elements.length){
             return null;
         }
@@ -46,7 +47,7 @@ public class MinHeapImpl extends MinHeap{
      *  returns the index of the element. if it's not there, throw a tantrum i mean exception
      */
     @Override
-    protected int getArrayIndex(Comparable element) {
+    protected int getArrayIndex(E element) {
         for(int i = 0; i < this.elements.length; i++){
             if(this.elements[i] != null && this.elements[i].equals(element)){
                 return i;
@@ -60,7 +61,8 @@ public class MinHeapImpl extends MinHeap{
      */
     @Override
     protected void doubleArraySize() {
-        Comparable[] arr = new Comparable[this.elements.length * 2];
+        Comparable<?>[] c =(new Comparable[this.elements.length * 2]);
+        E[] arr = (E[]) c;
         for(int i = 0; i < elements.length; i ++){
             arr[i] = this.elements[i];
         }

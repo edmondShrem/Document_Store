@@ -6,19 +6,20 @@ import edu.yu.cs.com1320.project.stage6.PersistenceManager;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree{
+public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree<Key , Value>{
     private static final int MAX = 4;
     private Node root; //root of the B-tree
     private Node leftMostExternalNode;
     private int height; //height of the B-tree
     private int n; //number of key-value pairs in the B-tree
+    private PersistenceManager<Key, Value> pM;
 
     public BTreeImpl(){
         this.root = new Node(0);
         this.leftMostExternalNode = this.root;
     }
     @Override
-    public Object get(Comparable key) {
+    public Value get(Comparable key) {
         if (key == null)
         {
             throw new IllegalArgumentException("argument to get() is null");
@@ -68,22 +69,26 @@ public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree{
         }
     }
 
+    //deletion????
     @Override
-    public Object put(Comparable key, Object val) {
+    public Value put(Key key, Value val) {
         if (key == null) {
             throw new IllegalArgumentException("argument key to put() is null");
         }
         //if the key already exists in the b-tree, simply replace the value
         Entry alreadyThere = this.get(this.root, (Key) key, this.height);
         if (alreadyThere != null) {
+            Value temp;
+            temp = (Value) alreadyThere.val;
             alreadyThere.val = val;
-            return;
+            return temp;
         }
 
         Node newNode = this.put(this.root, (Key) key, (Value) val, this.height);
         this.n++;
         if (newNode == null) {
-            return;
+            //maybe?
+            return null;
         }
 
         //split the root:
@@ -96,6 +101,8 @@ public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree{
         this.root = newRoot;
         //a split at the root always increases the tree height by 1
         this.height++;
+        return null;
+        //bro i legit have no clue. but ok sure
     }
     private Node put(Node currentNode, Key key, Value val, int height)
     {
@@ -170,12 +177,18 @@ public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree{
     }
     @Override
     public void moveToDisk(Comparable k) throws IOException {
-
+        if(pM == null){
+            throw new IllegalStateException("persistence manager was never set");
+        }
+        pM.serialize((Key) k, (Value) this.get(k));
     }
 
     @Override
     public void setPersistenceManager(PersistenceManager pm) {
-
+        if(!pm.getClass().equals(pM.getClass())){
+            throw new IllegalArgumentException("that is the wrong kind of persistence manager");
+        }
+        this.pM = pm;
     }
     private static final class Node {
         private int entryCount; // number of entries

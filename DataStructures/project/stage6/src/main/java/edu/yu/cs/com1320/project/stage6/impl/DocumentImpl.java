@@ -1,12 +1,10 @@
 package edu.yu.cs.com1320.project.stage6.impl;
 
 import edu.yu.cs.com1320.project.stage6.Document;
-import java.util.HashMap;
+
+import java.util.*;
 
 import java.net.URI;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 
 public class DocumentImpl implements edu.yu.cs.com1320.project.stage6.Document {
@@ -15,9 +13,9 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage6.Document {
     private URI uri;
     private String text;
     private byte[] binaryData;
-    private HashMap<String, Integer> wordCounts;
+    private Map<String, Integer> wordCounts;
     private long lastUsedTime;
-    public DocumentImpl(URI uri, String txt) {
+    public DocumentImpl(URI uri, String txt, Map<String, Integer> wordCountMap) {
         if (uri == null || uri.getPath() == null || uri.getPath().isEmpty() || txt == null || txt.equals("")) {
             throw new IllegalArgumentException("One or more arguments were blank or null");
         }
@@ -25,7 +23,11 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage6.Document {
         this.text = txt;
         this.binaryData = null;
         this.metaData = new HashMap<>();
-        this.wordCounts = new HashMap<>();
+        if(wordCountMap == null) {
+            this.wordCounts = new HashMap<>();
+        } else {
+            wordCounts = (HashMap<String, Integer>) wordCountMap;
+        }
         this.setWordTable();
         this.setLastUseTime(System.nanoTime());
     }
@@ -159,7 +161,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage6.Document {
 
     @Override
     public HashMap<String, Integer> getWordMap() {
-        return wordCounts;
+        return (HashMap<String, Integer>) wordCounts;
     }
 
     @Override
