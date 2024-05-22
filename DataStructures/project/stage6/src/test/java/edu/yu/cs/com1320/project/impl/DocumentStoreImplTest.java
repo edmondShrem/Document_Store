@@ -80,7 +80,7 @@ public class DocumentStoreImplTest {
 
     //welp time to write new tests i guess
     @Test
-    void basicOperations(){
+    void basicOperations() throws IOException {
         for(int i =0; i < 5; i++){
             ds.put(new ByteArrayInputStream("doc".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
         }
@@ -88,7 +88,7 @@ public class DocumentStoreImplTest {
         assertNotNull(ds.get(uris[1]));
     }
     @Test
-    void metaBasics(){
+    void metaBasics() throws IOException {
         for(int i =0; i < 5; i++){
             ds.put(new ByteArrayInputStream("doc".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
         }
@@ -101,7 +101,7 @@ public class DocumentStoreImplTest {
         assertFalse(gimmeAFile(uris[0]).exists());
     }
     @Test
-    void againButSearch(){
+    void againButSearch() throws IOException {
         for(int i =0; i < 5; i++){
             ds.put(new ByteArrayInputStream("doc".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
         }
@@ -127,7 +127,7 @@ public class DocumentStoreImplTest {
         assertFalse(gimmeAFile(uris[0]).exists());
     }
     @Test
-    void smolDelete(){
+    void smolDelete() throws IOException {
         for(int i =0; i < 5; i++){
             ds.put(new ByteArrayInputStream("doc".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
         }
@@ -139,7 +139,7 @@ public class DocumentStoreImplTest {
         assertFalse(gimmeAFile(uris[3]).exists());
     }
     @Test
-    void testing2dot4InTheSpecYkTheOne(){
+    void testing2dot4InTheSpecYkTheOne() throws IOException {
         for(int i =0; i < 5; i++){
             ds.put(new ByteArrayInputStream("doc".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
         }
@@ -148,7 +148,7 @@ public class DocumentStoreImplTest {
         assertFalse(gimmeAFile(uris[3]).exists());
     }
     @Test
-    void wordCountMapAndTime(){
+    void wordCountMapAndTime() throws IOException {
         for(int i =0; i < 5; i++){
             ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
         }
@@ -157,5 +157,167 @@ public class DocumentStoreImplTest {
         ds.setMaxDocumentCount(2);
         assertEquals(h, ds.get(uris[0]).getWordMap());
         assertNotEquals(t, ds.get(uris[0]).getLastUseTime());
+    }
+    @Test
+    void basicUndoTest() throws IOException {
+        for(int i =0; i < 3; i++){
+            ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[i + 1], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        assertTrue(gimmeAFile(uris[1]).exists());
+        assertFalse(gimmeAFile(uris[2]).exists());
+        assertFalse(gimmeAFile(uris[3]).exists());
+        ds.undo();
+        assertFalse(gimmeAFile(uris[1]).exists());
+        assertFalse(gimmeAFile(uris[2]).exists());
+        assertFalse(gimmeAFile(uris[3]).exists());
+    }
+    @Test
+    void piazza463UndoTest() throws IOException {
+        for(int i =0; i < 3; i++){
+            ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[i + 6], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        ds.put(new ByteArrayInputStream("the new one".getBytes()), uris[6], DocumentStore.DocumentFormat.TXT);
+        assertFalse(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertFalse(gimmeAFile(uris[8]).exists());
+        ds.undo();
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertFalse(gimmeAFile(uris[7]).exists());
+        assertFalse(gimmeAFile(uris[8]).exists());
+    }
+    @Test void putUndoTest() throws IOException {
+        for(int i =0; i < 10; i++){
+            ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[0], DocumentStore.DocumentFormat.TXT);
+        ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[1], DocumentStore.DocumentFormat.TXT);
+        ds.undo();
+        ds.undo();
+        assertTrue(gimmeAFile(uris[0]).exists());
+        assertTrue(gimmeAFile(uris[1]).exists());
+        assertTrue(gimmeAFile(uris[2]).exists());
+        assertTrue(gimmeAFile(uris[3]).exists());
+        assertTrue(gimmeAFile(uris[4]).exists());
+        assertTrue(gimmeAFile(uris[5]).exists());
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertFalse(gimmeAFile(uris[8]).exists());
+        assertFalse(gimmeAFile(uris[9]).exists());
+    }
+    @Test
+    void undoWithMeta() throws IOException {
+        for(int i =0; i < 10; i++){
+            ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        ds.setMetadata(uris[5], "big", "boi");
+        assertTrue(gimmeAFile(uris[0]).exists());
+        assertTrue(gimmeAFile(uris[1]).exists());
+        assertTrue(gimmeAFile(uris[2]).exists());
+        assertTrue(gimmeAFile(uris[3]).exists());
+        assertTrue(gimmeAFile(uris[4]).exists());
+        assertFalse(gimmeAFile(uris[5]).exists());
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertTrue(gimmeAFile(uris[8]).exists());
+        assertFalse(gimmeAFile(uris[9]).exists());
+        ds.undo();
+        assertTrue(gimmeAFile(uris[0]).exists());
+        assertTrue(gimmeAFile(uris[1]).exists());
+        assertTrue(gimmeAFile(uris[2]).exists());
+        assertTrue(gimmeAFile(uris[3]).exists());
+        assertTrue(gimmeAFile(uris[4]).exists());
+        assertTrue(gimmeAFile(uris[5]).exists());
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertFalse(gimmeAFile(uris[8]).exists());
+        assertFalse(gimmeAFile(uris[9]).exists());
+    }
+    @Test
+    void theRealDeleteUndo() throws IOException {
+        for(int i =0; i < 10; i++){
+            ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        ds.delete(uris[4]);
+        ds.delete(uris[5]);
+        ds.undo();
+        ds.undo();
+        assertTrue(gimmeAFile(uris[0]).exists());
+        assertTrue(gimmeAFile(uris[1]).exists());
+        assertTrue(gimmeAFile(uris[2]).exists());
+        assertTrue(gimmeAFile(uris[3]).exists());
+        assertTrue(gimmeAFile(uris[4]).exists());
+        assertTrue(gimmeAFile(uris[5]).exists());
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertFalse(gimmeAFile(uris[8]).exists());
+        assertFalse(gimmeAFile(uris[9]).exists());
+    }
+    void theFakeDeleteUndo() throws IOException {
+        for(int i =0; i < 10; i++){
+            ds.put(new ByteArrayInputStream("doc doc goose".getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        ds.put(null, uris[4], null);
+        ds.put(null, uris[5], null);
+        ds.undo();
+        ds.undo();
+        assertTrue(gimmeAFile(uris[0]).exists());
+        assertTrue(gimmeAFile(uris[1]).exists());
+        assertTrue(gimmeAFile(uris[2]).exists());
+        assertTrue(gimmeAFile(uris[3]).exists());
+        assertTrue(gimmeAFile(uris[4]).exists());
+        assertTrue(gimmeAFile(uris[5]).exists());
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertFalse(gimmeAFile(uris[8]).exists());
+        assertFalse(gimmeAFile(uris[9]).exists());
+    }
+    @Test
+    void deleteALotTest() throws IOException {
+        for(int i = 0; i < 2; i++){
+            ds.put(new ByteArrayInputStream(("chore").getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        for(int i =2; i < 10; i++){
+            ds.put(new ByteArrayInputStream(("farthing").getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        ds.deleteAll("farthing");
+        ds.undo();
+        assertTrue(gimmeAFile(uris[0]).exists());
+        assertTrue(gimmeAFile(uris[1]).exists());
+        assertTrue(gimmeAFile(uris[2]).exists());
+        assertTrue(gimmeAFile(uris[3]).exists());
+        assertTrue(gimmeAFile(uris[4]).exists());
+        assertTrue(gimmeAFile(uris[5]).exists());
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertFalse(gimmeAFile(uris[8]).exists());
+        assertFalse(gimmeAFile(uris[9]).exists());
+    }
+    @Test
+    void metaData() throws IOException {
+        for(int i =0; i < 10; i++){
+            ds.put(new ByteArrayInputStream(("farthing").getBytes()), uris[i], DocumentStore.DocumentFormat.TXT);
+        }
+        ds.setMaxDocumentCount(2);
+        ds.setMetadata(uris[1], "big", "burger");
+        Map<String, String> m = new HashMap<>();
+        m.put("big", "burger");
+        ds.searchByMetadata(m);
+        assertTrue(gimmeAFile(uris[0]).exists());
+        assertFalse(gimmeAFile(uris[1]).exists());
+        assertTrue(gimmeAFile(uris[2]).exists());
+        assertTrue(gimmeAFile(uris[3]).exists());
+        assertTrue(gimmeAFile(uris[4]).exists());
+        assertTrue(gimmeAFile(uris[5]).exists());
+        assertTrue(gimmeAFile(uris[6]).exists());
+        assertTrue(gimmeAFile(uris[7]).exists());
+        assertTrue(gimmeAFile(uris[8]).exists());
+        assertFalse(gimmeAFile(uris[9]).exists());
     }
 }

@@ -6,12 +6,12 @@ import edu.yu.cs.com1320.project.impl.MinHeapImpl;
 import edu.yu.cs.com1320.project.impl.StackImpl;
 import edu.yu.cs.com1320.project.impl.TrieImpl;
 import edu.yu.cs.com1320.project.stage6.Document;
+import edu.yu.cs.com1320.project.stage6.DocumentStore;
 import edu.yu.cs.com1320.project.undo.CommandSet;
 import edu.yu.cs.com1320.project.undo.GenericCommand;
 import edu.yu.cs.com1320.project.undo.Undoable;
 import edu.yu.cs.com1320.project.impl.BTreeImpl;
 
-import javax.print.Doc;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +26,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     private TrieImpl<URISafonUboiTeman> wordTrie;
     private TrieImpl<URISafonUboiTeman> metaTrie;
     private StackImpl<Undoable> commandStack;
+    //keeps track of what was sent to disk when in order to bring back properly when undoing stuff oh gosh
+    private StackImpl<URISafonUboiTeman> residentsOfTheShadowRealm;
+    private HashMap<URI,StackImpl<URISafonUboiTeman>> diskStates;
     private MinHeap<URISafonUboiTeman> timeHeap;
     private Set<URISafonUboiTeman> heapSet;
     private int trueStackSize;
@@ -41,6 +44,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         this.wordTrie = new TrieImpl<>();
         this.metaTrie = new TrieImpl<>();
         this.timeHeap = new MinHeapImpl();
+        residentsOfTheShadowRealm = new StackImpl<>();
+        diskStates = new HashMap<>();
         heapSet = new HashSet<>();
         this.trueStackSize = 0;
         maxBytes = Integer.MAX_VALUE;
@@ -53,6 +58,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         this.wordTrie = new TrieImpl<>();
         this.metaTrie = new TrieImpl<>();
         this.timeHeap = new MinHeapImpl();
+        residentsOfTheShadowRealm = new StackImpl<>();
+        diskStates = new HashMap<>();
+        diskStates = new HashMap<>();
         heapSet = new HashSet<>();
         this.trueStackSize = 0;
         maxBytes = Integer.MAX_VALUE;
@@ -87,13 +95,22 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         return count;
     }
     @Override
-    public String setMetadata(URI uri, String key, String value) {
+    public String setMetadata(URI uri, String key, String value) throws IOException{
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || key == null || key.equals("") || docTree.get(uri) == null) {
             throw new IllegalArgumentException("the uri is null or blank, if there is no document stored at that uri, or the key is null or blank");
         }
+        long oldTime = docTree.get(uri).getLastUseTime();
+        boolean inDisk = deleteFromSRIfNeeded(new URISafonUboiTeman(uri));
         if (trueStackSize <= this.getTrueStackSize()) {
             String old = this.getMetadata(uri, key);
-            commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {if(docTree.get(uri1)!= null){metaTrie.delete(key+"-"+value, new URISafonUboiTeman(uri)); docTree.get(uri1).setMetadataValue(key, old); metaTrie.put(key+"-"+old, new URISafonUboiTeman(uri1));}}));
+            commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {
+                metaTrie.delete(key+"-"+value, new URISafonUboiTeman(uri));
+                if(docTree.get(uri1)!= null && old != null){
+                    docTree.get(uri1).setMetadataValue(key, old);
+                    metaTrie.put(key+"-"+old, new URISafonUboiTeman(uri1));
+                }
+                undoMagicWhichIDontUnderstand(inDisk, uri1, oldTime);
+            }));
         }
         trueStackSize = this.getTrueStackSize();
         String old = this.docTree.get(uri).setMetadataValue(key, value);
@@ -115,7 +132,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
 
     }
     @Override
-    public String getMetadata(URI uri, String key) {
+    public String getMetadata(URI uri, String key) throws IOException{
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || key == null || key.equals("") || docTree.get(uri) == null) {
             throw new IllegalArgumentException("the uri is null or blank, if there is no document stored at that uri, or the key is null or blank");
         }
@@ -129,20 +146,39 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         this.cleanUpMemory();
         return val;
     }
-
+    private void bringAsManyBack(long oldTime){
+        while (getTotalBytes() < maxBytes && heapSet.size() < maxDocs && residentsOfTheShadowRealm.size() > 0){
+            URISafonUboiTeman u = residentsOfTheShadowRealm.peek();
+            if(getDocBytes(u) + getTotalBytes() <= maxBytes){
+                docTree.put(u.getKey(), (DocumentImpl) u.gimme()).setLastUseTime(oldTime);
+                addToHeapIfNotInSet(u);
+                residentsOfTheShadowRealm.pop();
+            } else {
+                cull();
+                break;
+            }
+        }
+    }
+    private void kickAsManyOut(){
+        cleanUpMemory();
+    }
     @Override
-    public int put(InputStream input, URI uri, DocumentFormat format) {
+    public int put(InputStream input, URI uri, DocumentStore.DocumentFormat format) throws IOException{
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || format == null) {
             throw new IllegalArgumentException("uri is null or empty, or format is null");
         }
+        boolean inDisk = deleteFromSRIfNeeded(new URISafonUboiTeman(uri));
         if (input == null) {
             DocumentImpl prev = docTree.get(uri);
+            long oldTime = prev.getLastUseTime();
             this.delete(uri);
             if (trueStackSize <= this.getTrueStackSize() && prev != null) {
                 if(prev.getDocumentTxt() != null){
-                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
+                    undoMagicDeleteEdition(inDisk, uri1, oldTime);}));
                 }else{
-                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
+                        undoMagicDeleteEdition(inDisk, uri1, oldTime);}));
                 }
             }
             trueStackSize = this.getTrueStackSize();
@@ -153,11 +189,18 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         if(bytes.length > maxBytes){
             throw new IllegalArgumentException("This document is over the memory limit: " + bytes.length + " > " + maxBytes);
         }
+
         DocumentImpl prev;
         prev = putBasedOnFormat(uri, format, bytes);
+        long oldTime = System.nanoTime();
         if (prev == null) {
+            //works
             if (trueStackSize <= this.getTrueStackSize()) {
-                commandStack.push(new GenericCommand<URI>(uri, (uri1) -> delete(uri1)));
+                long finalOldTime1 = oldTime;
+                commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {this.delete(uri1);
+                    kickAsManyOut();
+                    bringAsManyBack(finalOldTime1);
+                }));
             }
             trueStackSize = this.getTrueStackSize();
             if(getTotalBytes() > maxBytes || heapSet.size() > maxDocs) {
@@ -165,13 +208,28 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                     cull();
                 }
             }
+
             return 0;
         } else {
+            oldTime = prev.getLastUseTime();
             if (trueStackSize <= this.getTrueStackSize()) {
                 if(prev.getDocumentTxt() != null){
-                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                    long finalOldTime = oldTime;
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);throwIntoMetaTrie(prev);
+                        undoMagicWhichIDontUnderstand(inDisk, uri1, finalOldTime);
+
+                        //kickAsManyOut();
+                        //bringAsManyBack();
+                        //cull();
+                    }));
                 }else{
-                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                    long finalOldTime2 = oldTime;
+                    commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
+                        undoMagicWhichIDontUnderstand(inDisk, uri1, finalOldTime2);
+                        //kickAsManyOut();
+                       //bringAsManyBack();
+                        //cull();
+                    }));
                 }            }
             trueStackSize = this.getTrueStackSize();
             if(getTotalBytes() > maxBytes || heapSet.size() > maxDocs) {
@@ -180,6 +238,43 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 }
             }
             return prev.hashCode();
+        }
+    }
+
+    private void undoMagicWhichIDontUnderstand(boolean inDisk, URI uri1, long oldTime) {
+        if(inDisk) {
+            URISafonUboiTeman u = new URISafonUboiTeman(uri1);
+            u.setLastUseTime(Integer.MIN_VALUE);
+            timeHeap.reHeapify(u);
+            Document d = cull();
+            residentsOfTheShadowRealm.pop();
+            if(residentsOfTheShadowRealm.size() >0) {
+                docTree.get(residentsOfTheShadowRealm.pop().getKey()).setLastUseTime(oldTime);
+            }
+            stickOnBottomOfStack(new URISafonUboiTeman(d.getKey()));
+            cleanUpMemory();
+        } /*else {
+        if(residentsOfTheShadowRealm.size() >0) {
+            docTree.get(residentsOfTheShadowRealm.pop().getKey());
+        }*/
+    }
+
+    private int getDocBytes(URISafonUboiTeman u){
+        if (u.getDocumentTxt() != null){
+            return u.getDocumentTxt().getBytes().length;
+        } else {
+            return u.getDocumentBinaryData().length;
+        }
+    }
+    private void stickOnBottomOfStack(URISafonUboiTeman u){
+        deleteFromSRIfNeeded(u);
+        Stack<URISafonUboiTeman> temp = new StackImpl<>();
+        while(residentsOfTheShadowRealm.size() > 0){
+            temp.push(residentsOfTheShadowRealm.pop());
+        }
+        temp.push(u);
+        while(temp.size() > 0){
+            residentsOfTheShadowRealm.push(temp.pop());
         }
     }
 
@@ -205,15 +300,17 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         if (format == DocumentFormat.TXT) {
             DocumentImpl current = new DocumentImpl(uri, new String(bytes), null);
             current.setLastUseTime(System.nanoTime());
-            prev = docTree.put(uri, current);;
+            prev = docTree.get(uri);
+            docTree.put(uri, current);
             //this.delete(uri);
             this.throwItIntoTheTrie(current);
             this.throwIntoMetaTrie(current);
             totalBytes += current.getDocumentTxt().getBytes().length;
             this.cleanUpMemory();
-
         } else {
-            prev = docTree.put(uri, new DocumentImpl(uri, bytes));
+            DocumentImpl current = new DocumentImpl(uri, bytes);
+            prev = docTree.get(uri);
+            docTree.put(uri, current);
             this.throwIntoMetaTrie(docTree.get(uri));
             totalBytes += bytes.length;
             this.cleanUpMemory();
@@ -229,9 +326,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             u.setLastUseTime(System.nanoTime());
             this.addToHeapIfNotInSet(u);
             this.timeHeap.reHeapify(u);
+
             //this.timeHeap.remove();
             //this else is very new
-            this.cleanUpMemory();
 
         } else {
             URISafonUboiTeman steve = new URISafonUboiTeman(uri);
@@ -244,7 +341,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             /*URISafonUboiTeman steve = new URISafonUboiTeman(uri);
             this.timeHeap.insert(steve);*/
             //this.timeHeap.reHeapify(steve);
-        this.cleanUpMemory();
+        //this.cleanUpMemory();
         return prev;
     }
 
@@ -263,7 +360,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     }
 
     @Override
-    public Document get(URI url) {
+    public Document get(URI url) throws IOException{
         Document d = this.docTree.get(url);
         URISafonUboiTeman u = new URISafonUboiTeman(url);
         if(d != null) {
@@ -281,9 +378,14 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     public boolean delete(URI url) {
        // DocumentImpl prev = docTree.put(url, null);
         //this is a change
+        boolean inDisk = deleteFromSRIfNeeded(new URISafonUboiTeman(url));
         DocumentImpl prev = docTree.get(url);
+        long oldTime = System.nanoTime();
         if (prev != null) {
+             oldTime = prev.getLastUseTime();
+            deleteFromSRIfNeeded(new URISafonUboiTeman(url));
             prev.setLastUseTime(Integer.MIN_VALUE);
+            addToHeapIfNotInSet(new URISafonUboiTeman(url));
             this.timeHeap.reHeapify(new URISafonUboiTeman(url));
             Set<String> words = prev.getWords();
             for (String s : words) {
@@ -306,42 +408,54 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         }
         if (trueStackSize <= this.getTrueStackSize() && prev != null) {
             if(prev.getDocumentTxt() != null){
-            commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                long finalOldTime = oldTime;
+                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
+                undoMagicDeleteEdition(inDisk, uri1, finalOldTime);
+            }));
             }else{
-                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
+                long finalOldTime1 = oldTime;
+                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
+                    undoMagicDeleteEdition(inDisk, uri1, finalOldTime1);
+                }));
             }
         }
         trueStackSize = this.getTrueStackSize();
         return prev != null;
     }
-//deal with these later
+    private void stickAtTheTopOfSRIfThere(URISafonUboiTeman u){
+       if (deleteFromSRIfNeeded(u)){
+           residentsOfTheShadowRealm.push(u);
+       }
+    }
+    private void undoMagicDeleteEdition(boolean inDisk, URI uri1, long oldTime) {
+        if(inDisk) {
+            URISafonUboiTeman u = new URISafonUboiTeman(uri1);
+            u.setLastUseTime(Integer.MIN_VALUE);
+            timeHeap.reHeapify(u);
+            Document d = cull();
+            stickAtTheTopOfSRIfThere(u);
+            residentsOfTheShadowRealm.pop();
+            bringAsManyBack(oldTime);
+            stickOnBottomOfStack(new URISafonUboiTeman(d.getKey()));
+            cleanUpMemory();
+
+        }
+    }
+
+    //deal with these later
     @Override
     public void undo() throws IllegalStateException {
-        long time = System.nanoTime();
+      //  long time = System.nanoTime();
         if (commandStack.size() == 0) {
             throw new IllegalStateException("Nothing to undo");
         }
         Undoable c = commandStack.pop();
-        if(c.getClass().equals(GenericCommand.class)){
-            if(docTree.get((URI)((GenericCommand)c).getTarget()) != null) {
-                docTree.get((URI) ((GenericCommand) c).getTarget()).setLastUseTime(time);
-                timeHeap.reHeapify(new URISafonUboiTeman((URI) ((GenericCommand) c).getTarget()));
-
-            }
-        } else {
-            for(Object g:((CommandSet)c)){
-                if(docTree.get((URI)((GenericCommand)g).getTarget()) != null) {
-                    docTree.get((URI) ((GenericCommand) g).getTarget()).setLastUseTime(time);
-                    timeHeap.reHeapify(new URISafonUboiTeman((URI) ((GenericCommand) c).getTarget()));
-                }
-            }
-        }
         c.undo();
     }
 
     @Override
     public void undo(URI url) throws IllegalStateException {
-        long time = System.nanoTime();
+        //long time = System.nanoTime();
         if (commandStack.size() == 0) {
             throw new IllegalStateException("Nothing to undo");
         }
@@ -359,7 +473,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             if (commandStack.peek().getClass().equals(GenericCommand.class) && ((GenericCommand<URI>)commandStack.peek()).getTarget().equals(url)){
                 commandStack.pop().undo();
                 if(docTree.get(url) != null) {
-                    docTree.get(url).setLastUseTime(time);
+                  //  docTree.get(url).setLastUseTime(time);
                     timeHeap.reHeapify(new URISafonUboiTeman(url));
                 }
                 /////
@@ -368,7 +482,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 found = true;
                 ((CommandSet<URI>)(commandStack.peek())).undo(url);
                 if(docTree.get(url) != null) {
-                    docTree.get(url).setLastUseTime(time);
+                  //  docTree.get(url).setLastUseTime(time);
                     timeHeap.reHeapify(new URISafonUboiTeman(url));
                 }
                ////
@@ -385,7 +499,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     }
 
     @Override
-    public List<Document> search(String keyword) {
+    public List<Document> search(String keyword) throws IOException{
         long time = System.nanoTime();
         Comparator<URISafonUboiTeman> c = new docComp(keyword);
         List<URISafonUboiTeman> l = wordTrie.getSorted(keyword, c);
@@ -403,7 +517,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     }
 
     @Override
-    public List<Document> searchByPrefix(String keywordPrefix) {
+    public List<Document> searchByPrefix(String keywordPrefix) throws IOException{
         long time = System.nanoTime();
         Comparator<URISafonUboiTeman> c = new preComp(keywordPrefix);
         List<URISafonUboiTeman> l = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
@@ -465,6 +579,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             if (trueStackSize <= this.getTrueStackSize()) {
                 CommandSet<URI> c = new CommandSet<URI>();
                 for(Document doc: list){
+                    long oldTIme = doc.getLastUseTime();
+                    boolean inDisk = deleteFromSRIfNeeded(new URISafonUboiTeman(d.getKey()));
+                    diskStates.put(doc.getKey(), stackCopy());
                     c.addCommand(new GenericCommand<URI>(doc.getKey(), (uri1) -> {
                         if(((Document)doc).getDocumentTxt() != null) {
                             if(doc.getDocumentTxt().getBytes().length > maxBytes){
@@ -475,8 +592,17 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                             }
                             this.putBasedOnFormat(uri1, DocumentFormat.TXT, doc.getDocumentTxt().getBytes());
                             throwItIntoTheTrie(doc);
+                            throwIntoMetaTrie(doc);
+                            undoMagicDeleteEdition(inDisk, uri1, oldTIme);
+                            residentsOfTheShadowRealm = diskStates.get(uri1);
+                           // allignDiskWithStack();
+                            cleanUpMemory();
                         } else {
                             this.putBasedOnFormat(uri1, DocumentFormat.BINARY, doc.getDocumentBinaryData());
+                            throwIntoMetaTrie(doc);
+                            undoMagicDeleteEdition(inDisk, uri1, oldTIme);
+                         //   allignDiskWithStack();
+                            cleanUpMemory();
                         }
                     }));
                 }
@@ -489,6 +615,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 totalBytes -= d.getDocumentBinaryData().length;
             }
             d.setLastUseTime(Integer.MIN_VALUE);
+            addToHeapIfNotInSet(new URISafonUboiTeman(d.getKey()));
             timeHeap.reHeapify(new URISafonUboiTeman(d.getKey()));
             heapSet.remove(timeHeap.remove());//gonna have to delete from metatrie if that becomes a thing
             docTree.put(d.getKey(), null);
@@ -497,9 +624,35 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         return uris;
     }
 
+    private void allignDiskWithStack() {
+        Stack<URISafonUboiTeman> temp = new StackImpl<>();
+        while(residentsOfTheShadowRealm.size() > 0){
+            if(heapSet.contains(residentsOfTheShadowRealm.peek())){
+                residentsOfTheShadowRealm.peek().setLastUseTime(Integer.MIN_VALUE);
+                cull();
+            }
+            temp.push(residentsOfTheShadowRealm.pop());
+        }
+        while(temp.size() >0){
+            residentsOfTheShadowRealm.push(temp.pop());
+        }
+    }
+
+    private StackImpl<URISafonUboiTeman> stackCopy(){
+        StackImpl<URISafonUboiTeman> copy = new StackImpl<>();
+        StackImpl<URISafonUboiTeman> temp = new StackImpl<>();
+        while(residentsOfTheShadowRealm.size() > 0){
+            temp.push(residentsOfTheShadowRealm.pop());
+        }
+        while(temp.size() > 0){
+            residentsOfTheShadowRealm.push(temp.peek());
+            copy.push(temp.pop());
+        }
+        return copy;
+    }
     //there's a better way to do this but i also need to finish. wooo ;-;
     @Override
-    public List<Document> searchByMetadata(Map<String, String> keysValues) {
+    public List<Document> searchByMetadata(Map<String, String> keysValues) throws IOException{
         long time = System.nanoTime();
         List<Document> list = new ArrayList<>();
         List<URISafonUboiTeman> l1 = new ArrayList<>();
@@ -536,7 +689,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         return takeTheL;
     }
     @Override
-    public List<Document> searchByKeywordAndMetadata(String keyword, Map<String, String> keysValues) {
+    public List<Document> searchByKeywordAndMetadata(String keyword, Map<String, String> keysValues) throws IOException{
         Comparator<URISafonUboiTeman> c = new docComp(keyword);
         List<URISafonUboiTeman> l = wordTrie.getSorted(keyword, c);
         List<Document> takeTheL= new ArrayList<>();
@@ -548,7 +701,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     }
 
     @Override
-    public List<Document> searchByPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) {
+    public List<Document> searchByPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) throws IOException{
         Comparator<URISafonUboiTeman> c = new preComp(keywordPrefix);
         List<URISafonUboiTeman> byPrefix = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
         List<Document> takeTheL= new ArrayList<>();
@@ -593,14 +746,14 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     }
 
     @Override
-    public Set<URI> deleteAllWithMetadata(Map<String, String> keysValues) {
+    public Set<URI> deleteAllWithMetadata(Map<String, String> keysValues) throws IOException{
         List<Document> toDelete = this.searchByMetadata(keysValues);
         this.cleanUpMemory();
         return deleteAllAndGetUris(toDelete);
     }
 
     @Override
-    public Set<URI> deleteAllWithKeywordAndMetadata(String keyword, Map<String, String> keysValues) {
+    public Set<URI> deleteAllWithKeywordAndMetadata(String keyword, Map<String, String> keysValues) throws IOException{
         Comparator<URISafonUboiTeman> c = new docComp(keyword);
         List<URISafonUboiTeman> toDeleteKeyword = wordTrie.getSorted(keyword, c);
         List<Document> takeTheL= new ArrayList<>();
@@ -613,7 +766,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     }
 
     @Override
-    public Set<URI> deleteAllWithPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) {
+    public Set<URI> deleteAllWithPrefixAndMetadata(String keywordPrefix, Map<String, String> keysValues) throws IOException{
         Comparator<URISafonUboiTeman> c = new preComp(keywordPrefix);
         List<URISafonUboiTeman> byPrefix = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
         List<Document> takeTheL= new ArrayList<>();
@@ -693,6 +846,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         heapSet.remove(this.timeHeap.remove());
         Document d = prev.gimme();
         try {
+            deleteFromSRIfNeeded(new URISafonUboiTeman(prev.getKey()));
+            residentsOfTheShadowRealm.push(prev);
             this.docTree.moveToDisk(d.getKey());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -734,6 +889,22 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 return 0;
             }
         }
+    }
+    private boolean deleteFromSRIfNeeded(URISafonUboiTeman u){
+        StackImpl<URISafonUboiTeman> temp = new StackImpl<>();
+        boolean wasInDisk = false;
+        while(residentsOfTheShadowRealm.size() > 0){
+            if(!residentsOfTheShadowRealm.peek().equals(u)){
+                temp.push(residentsOfTheShadowRealm.pop());
+            } else {
+                residentsOfTheShadowRealm.pop();
+                wasInDisk = true;
+            }
+        }
+        while(temp.size() > 0){
+            residentsOfTheShadowRealm.push(temp.pop());
+        }
+        return wasInDisk;
     }
     private class preComp implements Comparator<URISafonUboiTeman>{
         String comper;

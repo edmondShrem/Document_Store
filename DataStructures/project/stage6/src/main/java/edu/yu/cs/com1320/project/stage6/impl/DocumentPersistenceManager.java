@@ -146,6 +146,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         JsonElement babyJ = JsonParser.parseReader(reader);
         reader.close();
         this.delete(uri);
+        Gson g = new Gson();
         return nick.deserialize(babyJ, Document.class, null);
     }
 
