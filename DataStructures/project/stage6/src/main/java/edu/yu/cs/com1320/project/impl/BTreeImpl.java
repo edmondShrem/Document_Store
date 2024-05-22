@@ -27,6 +27,16 @@ public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree<Key
         Entry entry = this.get(this.root, (Key)key, this.height);
         if(entry != null)
         {
+            Value v = (Value)entry.val;
+            if(v == null){
+                try {
+                    Value vFromD = pM.deserialize((Key)key);
+                    this.put((Key) key, vFromD);
+                    v = vFromD;
+                } catch (IOException e) {
+                    return null;
+                }
+            }
             return (Value)entry.val;
         }
         return null;
@@ -80,6 +90,14 @@ public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree<Key
         if (alreadyThere != null) {
             Value temp;
             temp = (Value) alreadyThere.val;
+            if(temp == null){
+                try {
+                    pM.deserialize(key);
+                } catch (IOException e) {
+                    alreadyThere.val = val;
+                    return temp;
+                }
+            }
             alreadyThere.val = val;
             return temp;
         }
@@ -181,13 +199,14 @@ public class BTreeImpl <Key extends Comparable<Key>, Value> implements BTree<Key
             throw new IllegalStateException("persistence manager was never set");
         }
         pM.serialize((Key) k, (Value) this.get(k));
+        this.put((Key) k, null);
     }
 
     @Override
     public void setPersistenceManager(PersistenceManager pm) {
-        if(!pm.getClass().equals(pM.getClass())){
+        /*if(!pm.getClass().equals(pM.getClass())){
             throw new IllegalArgumentException("that is the wrong kind of persistence manager");
-        }
+        }*/
         this.pM = pm;
     }
     private static final class Node {

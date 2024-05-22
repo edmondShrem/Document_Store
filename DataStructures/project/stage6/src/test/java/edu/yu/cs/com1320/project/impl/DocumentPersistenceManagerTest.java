@@ -6,6 +6,7 @@ import edu.yu.cs.com1320.project.stage6.impl.DocumentPersistenceManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -23,6 +24,9 @@ public class DocumentPersistenceManagerTest {
         d.serialize(u, doc);
         Document paula = d.deserialize(u);
         assertEquals(doc, paula);
-        assertTrue(d.delete(paula.getKey()));
+        DocumentPersistenceManager craig = new DocumentPersistenceManager(new File("C:\\documents"));
+        craig.serialize(u, doc);
+        craig.deserialize(u);
+        //assertTrue(d.delete(paula.getKey()));
     }
 }

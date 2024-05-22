@@ -12,6 +12,7 @@ import edu.yu.cs.com1320.project.undo.Undoable;
 import edu.yu.cs.com1320.project.impl.BTreeImpl;
 
 import javax.print.Doc;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -26,21 +27,47 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     private TrieImpl<URISafonUboiTeman> metaTrie;
     private StackImpl<Undoable> commandStack;
     private MinHeap<URISafonUboiTeman> timeHeap;
+    private Set<URISafonUboiTeman> heapSet;
     private int trueStackSize;
     private int maxDocs;
     private int maxBytes;
-    private int totalDocs;
+
     private int totalBytes;
 
     public DocumentStoreImpl() {
         this.docTree = new BTreeImpl<>();
+        this.docTree.setPersistenceManager(new DocumentPersistenceManager());
         this.commandStack = new StackImpl<>();
         this.wordTrie = new TrieImpl<>();
         this.metaTrie = new TrieImpl<>();
         this.timeHeap = new MinHeapImpl();
+        heapSet = new HashSet<>();
         this.trueStackSize = 0;
         maxBytes = Integer.MAX_VALUE;
         maxDocs = Integer.MAX_VALUE;
+    }
+    public DocumentStoreImpl(File baseDir) {
+        this.docTree = new BTreeImpl<>();
+        this.docTree.setPersistenceManager(new DocumentPersistenceManager(baseDir));
+        this.commandStack = new StackImpl<>();
+        this.wordTrie = new TrieImpl<>();
+        this.metaTrie = new TrieImpl<>();
+        this.timeHeap = new MinHeapImpl();
+        heapSet = new HashSet<>();
+        this.trueStackSize = 0;
+        maxBytes = Integer.MAX_VALUE;
+        maxDocs = Integer.MAX_VALUE;
+    }
+    private void addToHeapIfNotInSet(URISafonUboiTeman u){
+        if (!heapSet.contains(u)){
+            timeHeap.insert(u);
+            heapSet.add(u);
+            if(u.getDocumentTxt() != null){
+                totalBytes += u.getDocumentTxt().getBytes().length;
+            } else {
+                totalBytes += u.getDocumentBinaryData().length;
+            }
+        }
     }
     private int getTrueStackSize(){
         int x = commandStack.size();
@@ -81,7 +108,9 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         //???
         //URISafonUboiTeman u = new URISafonUboiTeman(uri);
         u.setLastUseTime(System.nanoTime());
+        this.addToHeapIfNotInSet(u);
         this.timeHeap.reHeapify(u);
+        this.cleanUpMemory();
         return old;
 
     }
@@ -93,8 +122,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         String val = this.docTree.get(uri).getMetadataValue(key);
         if(val != null) {
             this.docTree.get(uri).setLastUseTime(System.nanoTime());
-            this.timeHeap.reHeapify(new URISafonUboiTeman(uri));
+            URISafonUboiTeman u = new URISafonUboiTeman(uri);
+            this.addToHeapIfNotInSet(u);
+            this.timeHeap.reHeapify(u);
         }
+        this.cleanUpMemory();
         return val;
     }
 
@@ -128,8 +160,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 commandStack.push(new GenericCommand<URI>(uri, (uri1) -> delete(uri1)));
             }
             trueStackSize = this.getTrueStackSize();
-            if(getTotalBytes() > maxBytes || totalDocs > maxDocs) {
-                while (getTotalBytes() > maxBytes || totalDocs > maxDocs) {
+            if(getTotalBytes() > maxBytes || heapSet.size() > maxDocs) {
+                while (getTotalBytes() > maxBytes || heapSet.size() > maxDocs) {
                     cull();
                 }
             }
@@ -142,8 +174,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                     commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);}));
                 }            }
             trueStackSize = this.getTrueStackSize();
-            if(getTotalBytes() > maxBytes || totalDocs > maxDocs) {
-                while (getTotalBytes() > maxBytes || totalDocs > maxDocs) {
+            if(getTotalBytes() > maxBytes || heapSet.size() > maxDocs) {
+                while (getTotalBytes() > maxBytes || heapSet.size() > maxDocs) {
                     cull();
                 }
             }
@@ -167,36 +199,52 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
 
     private DocumentImpl putBasedOnFormat(URI uri, DocumentFormat format, byte[] bytes) {
         DocumentImpl prev;
-        if(totalDocs >= maxDocs || getTotalBytes() >= maxBytes){
+        if(heapSet.size() > maxDocs || getTotalBytes() > maxBytes){
             cull();
         }
         if (format == DocumentFormat.TXT) {
             DocumentImpl current = new DocumentImpl(uri, new String(bytes), null);
             current.setLastUseTime(System.nanoTime());
-            prev = docTree.put(uri, null);
+            prev = docTree.put(uri, current);;
             //this.delete(uri);
-            docTree.put(uri, current);
             this.throwItIntoTheTrie(current);
             this.throwIntoMetaTrie(current);
             totalBytes += current.getDocumentTxt().getBytes().length;
+            this.cleanUpMemory();
+
         } else {
             prev = docTree.put(uri, new DocumentImpl(uri, bytes));
             this.throwIntoMetaTrie(docTree.get(uri));
             totalBytes += bytes.length;
+            this.cleanUpMemory();
+
         }
         if(prev != null) {
+            if (prev.getDocumentTxt() != null){
+                totalBytes -= prev.getDocumentTxt().getBytes().length;
+            } else {
+                totalBytes -= prev.getDocumentBinaryData().length;
+            }
             URISafonUboiTeman u = new URISafonUboiTeman(prev.getKey());
-            u.setLastUseTime(Integer.MIN_VALUE);
+            u.setLastUseTime(System.nanoTime());
+            this.addToHeapIfNotInSet(u);
             this.timeHeap.reHeapify(u);
-            this.timeHeap.remove();
+            //this.timeHeap.remove();
             //this else is very new
+            this.cleanUpMemory();
+
         } else {
-            totalDocs++;
-        }
             URISafonUboiTeman steve = new URISafonUboiTeman(uri);
             this.timeHeap.insert(steve);
             this.timeHeap.reHeapify(steve);
+            heapSet.add(steve);
+            this.cleanUpMemory();
 
+        }
+            /*URISafonUboiTeman steve = new URISafonUboiTeman(uri);
+            this.timeHeap.insert(steve);*/
+            //this.timeHeap.reHeapify(steve);
+        this.cleanUpMemory();
         return prev;
     }
 
@@ -219,9 +267,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         Document d = this.docTree.get(url);
         URISafonUboiTeman u = new URISafonUboiTeman(url);
         if(d != null) {
+            addToHeapIfNotInSet(u);
             d.setLastUseTime(System.nanoTime());
             this.timeHeap.reHeapify(u);
         }
+        this.cleanUpMemory();
         return d;
     }
 
@@ -246,8 +296,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             }
             //debatable
             prev.setLastUseTime(Integer.MIN_VALUE);
-            this.timeHeap.remove();
-            totalDocs--;
+            heapSet.remove(this.timeHeap.remove());
             if(prev.getDocumentTxt() != null){
                 totalBytes -= prev.getDocumentTxt().getBytes().length;
             } else {
@@ -342,12 +391,14 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         List<URISafonUboiTeman> l = wordTrie.getSorted(keyword, c);
         for(URISafonUboiTeman d : l){
             d.setLastUseTime(time);
-            this.timeHeap.reHeapify(new URISafonUboiTeman(d.getKey()));
+            this.addToHeapIfNotInSet(d);
+            this.timeHeap.reHeapify(d);
         }
         List<Document> takeTheL= new ArrayList<>();
         for(URISafonUboiTeman d : l) {
             takeTheL.add(d.gimme());
         }
+        this.cleanUpMemory();
         return takeTheL;
     }
 
@@ -358,12 +409,14 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         List<URISafonUboiTeman> l = wordTrie.getAllWithPrefixSorted(keywordPrefix, c);
         for(URISafonUboiTeman d : l){
             d.setLastUseTime(time);
-            this.timeHeap.reHeapify(new URISafonUboiTeman(d.getKey()));
+            this.addToHeapIfNotInSet(d);
+            this.timeHeap.reHeapify(d);
         }
         List<Document> takeTheL= new ArrayList<>();
         for(URISafonUboiTeman d : l) {
             takeTheL.add(d.gimme());
         }
+        this.cleanUpMemory();
         return takeTheL;
     }
 
@@ -375,6 +428,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         for(URISafonUboiTeman d : list) {
             takeTheL.add(d.gimme());
         }
+        this.cleanUpMemory();
         return deleteAllAndGetUris(takeTheL);
     }
 
@@ -386,6 +440,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         for(URISafonUboiTeman d : list) {
             takeTheL.add(d.gimme());
         }
+        this.cleanUpMemory();
         return deleteAllAndGetUris(takeTheL);
     }
 
@@ -415,7 +470,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                             if(doc.getDocumentTxt().getBytes().length > maxBytes){
                                 throw new IllegalArgumentException();
                             }
-                            if (totalDocs >= maxDocs){
+                            if (heapSet.size() >= maxDocs){
                                 cull();
                             }
                             this.putBasedOnFormat(uri1, DocumentFormat.TXT, doc.getDocumentTxt().getBytes());
@@ -428,12 +483,17 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 commandStack.push(c);
             }
             trueStackSize = this.getTrueStackSize();
+            if(d.getDocumentTxt() != null){
+                totalBytes -= d.getDocumentTxt().getBytes().length;
+            } else {
+                totalBytes -= d.getDocumentBinaryData().length;
+            }
             d.setLastUseTime(Integer.MIN_VALUE);
             timeHeap.reHeapify(new URISafonUboiTeman(d.getKey()));
-            timeHeap.remove();//gonna have to delete from metatrie if that becomes a thing
+            heapSet.remove(timeHeap.remove());//gonna have to delete from metatrie if that becomes a thing
             docTree.put(d.getKey(), null);
         }
-        totalDocs -= uris.size();
+        this.cleanUpMemory();
         return uris;
     }
 
@@ -451,16 +511,18 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         for(String s:keys){
            l1 = metaTrie.get(s+"-"+keysValues.get(s)).stream().toList();
            if(l2.isEmpty()){
-               l2 = l1;
+               l2.addAll(l1);
            } else {
                l2 = this.inBoth(l1,l2);
            }
         }
         for (URISafonUboiTeman d : l2) {
                         d.setLastUseTime(time);
+                        this.addToHeapIfNotInSet(d);
                         this.timeHeap.reHeapify(d);
                         list.add(d.gimme());
                     }
+        this.cleanUpMemory();
         return list;
     }
     private List<URISafonUboiTeman> inBoth(List<URISafonUboiTeman> l1, List<URISafonUboiTeman> l2){
@@ -470,6 +532,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 takeTheL.add(d);
             }
         }
+        this.cleanUpMemory();
         return takeTheL;
     }
     @Override
@@ -480,6 +543,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         for(URISafonUboiTeman d : l) {
             takeTheL.add(d.gimme());
         }
+        this.cleanUpMemory();
         return getMetaIntersections(keysValues, takeTheL);
     }
 
@@ -491,6 +555,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         for(URISafonUboiTeman d : byPrefix) {
             takeTheL.add(d.gimme());
         }
+        this.cleanUpMemory();
         return getMetaIntersections(keysValues, takeTheL);
     }
 
@@ -510,23 +575,27 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         }
         for (URISafonUboiTeman d : l2) {
             d.setLastUseTime(time);
-            this.timeHeap.reHeapify(new URISafonUboiTeman(d.getKey()));
+            this.addToHeapIfNotInSet(d);
+            this.timeHeap.reHeapify(d);
             byMetaData.add(d.gimme());
         }
         List<Document> toReturn = new ArrayList<Document>();
         for (Document d : byPrefix) {
             if (byMetaData.contains(d)) {
                 d.setLastUseTime(time);
+                this.addToHeapIfNotInSet(new URISafonUboiTeman(d.getKey()));
                 this.timeHeap.reHeapify(new URISafonUboiTeman(d.getKey()));
                 toReturn.add(d);
             }
         }
+        this.cleanUpMemory();
         return toReturn;
     }
 
     @Override
     public Set<URI> deleteAllWithMetadata(Map<String, String> keysValues) {
         List<Document> toDelete = this.searchByMetadata(keysValues);
+        this.cleanUpMemory();
         return deleteAllAndGetUris(toDelete);
     }
 
@@ -539,7 +608,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             takeTheL.add(d.gimme());
         }
         List<Document> toDelete = getMetaIntersections(keysValues, takeTheL);
-
+        this.cleanUpMemory();
         return deleteAllAndGetUris(toDelete);
     }
 
@@ -552,23 +621,24 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             takeTheL.add(d.gimme());
         }
         List<Document> toDelete = getMetaIntersections(keysValues, takeTheL);
+        this.cleanUpMemory();
         return deleteAllAndGetUris(toDelete);
     }
 
     @Override
     public void setMaxDocumentCount(int limit) {
-        int totalDocs = this.totalDocs;
+       // int heapSet.size() = this.heapSet.size();
         this.maxDocs = limit;
         Document prev;
-        if(totalDocs > this.maxDocs){
-            while(totalDocs > this.maxDocs) {
+        if(heapSet.size() > this.maxDocs){
+            while(heapSet.size() > this.maxDocs) {
                 Document d = cull();
-                totalDocs--;
-                if(d.getDocumentTxt() != null){
+               // heapSet.size()--;
+                /*if(d.getDocumentTxt() != null){
                     totalBytes -= d.getDocumentTxt().getBytes().length;
                 } else {
                     totalBytes -= d.getDocumentBinaryData().length;
-                }
+                }*/
             }
         }
     }
@@ -598,20 +668,20 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             commandStack.push(temp.pop());
         }
         this.trueStackSize = getTrueStackSize();
+        this.cleanUpMemory();
     }
     @Override
     public void setMaxDocumentBytes(int limit) {
         this.maxBytes = limit;
-        int currentBytes = this.getTotalBytes();
         Document prev;
-        if(currentBytes > maxBytes){
-            while(currentBytes > maxBytes){
+        if(totalBytes > maxBytes){
+            while(totalBytes > maxBytes){
                 prev = cull();
-                if(prev.getDocumentTxt() != null){
-                    currentBytes -= prev.getDocumentTxt().getBytes().length;
+               /* if(prev.getDocumentTxt() != null){
+                    totalBytes -= prev.getDocumentTxt().getBytes().length;
                 } else {
-                    currentBytes -= prev.getDocumentBinaryData().length;
-                }
+                    totalBytes -= prev.getDocumentBinaryData().length;
+                }*/
             }
         }
     }
@@ -620,16 +690,27 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         URISafonUboiTeman prev;
         prev = timeHeap.peek();
         //this.timeHeap.reHeapify(prev);
-        this.timeHeap.remove();
+        heapSet.remove(this.timeHeap.remove());
         Document d = prev.gimme();
-        removeFromUndos(prev.gimme());
-        totalDocs--;
+        try {
+            this.docTree.moveToDisk(d.getKey());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        //removeFromUndos(prev.gimme());
+        //heapSet.size()--;
         if(d.getDocumentTxt() != null){
             totalBytes -= d.getDocumentTxt().getBytes().length;
         } else {
             totalBytes -= d.getDocumentBinaryData().length;
         }
         return d;
+    }
+    //welp we're doing this now i guess
+    private void cleanUpMemory(){
+        while(totalBytes > maxBytes || heapSet.size() > maxDocs){
+            cull();
+        }
     }
 
     private int getTotalBytes(){

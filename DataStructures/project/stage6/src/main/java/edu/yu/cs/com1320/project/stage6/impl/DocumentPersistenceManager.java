@@ -18,7 +18,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 //import com.google.gson.GsonBuilder;
 //to be actually implemented later :P
 public class DocumentPersistenceManager implements PersistenceManager<URI, Document> {
-    //gotta make a constructor????????
+    private File baseDir;
+    public DocumentPersistenceManager(File baseDir) {
+        this.baseDir = baseDir;
+    }
+    public DocumentPersistenceManager(){
+        baseDir = null;
+    }
+
+    //gotta make a constructor???????? immigrants.
     @Override
     public void serialize(URI uri, Document val) throws IOException {
         JsonSerializer<Document> fred = new JsonSerializer<Document>() {
@@ -58,7 +66,12 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         } else if (path.startsWith("https://")){
             path = path.substring(8);
         }
-        File f = new File(path + ".json");
+        File f;
+        if (baseDir != null) {
+            f = new File(baseDir, path +".json");
+        } else {
+            f = new File(path + ".json");
+        }
         f.getParentFile().mkdirs();
         if(f.createNewFile()) {
             FileWriter write = new FileWriter(f);
@@ -123,10 +136,16 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         } else if (path.startsWith("https://")){
             path = path.substring(8);
         }
-        File f = new File(path + ".json");
+        File f;
+        if (baseDir != null) {
+            f = new File(baseDir, path +".json");
+        } else {
+            f = new File(path + ".json");
+        }
         FileReader reader = new FileReader(f);
         JsonElement babyJ = JsonParser.parseReader(reader);
         reader.close();
+        this.delete(uri);
         return nick.deserialize(babyJ, Document.class, null);
     }
 
@@ -138,7 +157,12 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         } else if (path.startsWith("https://")){
             path = path.substring(8);
         }
-        File f = new File(path + ".json");
+        File f;
+        if (baseDir != null) {
+            f = new File(baseDir, path +".json");
+        } else {
+            f = new File(path + ".json");
+        }
         boolean deleted = f.delete();
         if(deleted){
             while(f.getParent() != null) {
