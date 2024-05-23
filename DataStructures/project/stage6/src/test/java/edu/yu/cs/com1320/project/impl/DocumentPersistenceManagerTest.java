@@ -19,14 +19,13 @@ public class DocumentPersistenceManagerTest {
     void idkMan() throws URISyntaxException, IOException {
         DocumentPersistenceManager d = new DocumentPersistenceManager();
         URI u = new URI("http://www.yu.edu/documents/docScratch");
-        DocumentImpl doc = new DocumentImpl(u, "big fart", null);
+        DocumentImpl doc = new DocumentImpl(u, "big fart".getBytes());
         doc.setMetadataValue("lol", "wee");
         d.serialize(u, doc);
         Document paula = d.deserialize(u);
         assertEquals(doc, paula);
         DocumentPersistenceManager craig = new DocumentPersistenceManager(new File("C:\\documents"));
         craig.serialize(u, doc);
-        craig.deserialize(u);
         //assertTrue(d.delete(paula.getKey()));
     }
 }

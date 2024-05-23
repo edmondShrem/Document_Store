@@ -120,7 +120,7 @@ public class DocumentImpl implements edu.yu.cs.com1320.project.stage6.Document {
     public void setMetadata(HashMap<String, String> metadata) {
         this.metaData = metadata;
     }
-
+    @Override
     public String getDocumentTxt() {
         return this.text;
     }

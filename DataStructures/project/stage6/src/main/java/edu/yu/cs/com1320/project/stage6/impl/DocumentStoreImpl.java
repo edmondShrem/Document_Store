@@ -60,7 +60,6 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         this.timeHeap = new MinHeapImpl();
         residentsOfTheShadowRealm = new StackImpl<>();
         diskStates = new HashMap<>();
-        diskStates = new HashMap<>();
         heapSet = new HashSet<>();
         this.trueStackSize = 0;
         maxBytes = Integer.MAX_VALUE;
@@ -118,18 +117,12 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         if (old != null){
             metaTrie.delete(key +"-"+old, u);
         }
-        //ah
         metaTrie.put(key+"-"+value, u);
-        //put back maybe
-        //this.docTree.get(uri).setLastUseTime(System.nanoTime());
-        //???
-        //URISafonUboiTeman u = new URISafonUboiTeman(uri);
         u.setLastUseTime(System.nanoTime());
         this.addToHeapIfNotInSet(u);
         this.timeHeap.reHeapify(u);
         this.cleanUpMemory();
         return old;
-
     }
     @Override
     public String getMetadata(URI uri, String key) throws IOException{
@@ -218,17 +211,11 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                     commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);throwIntoMetaTrie(prev);
                         undoMagicWhichIDontUnderstand(inDisk, uri1, finalOldTime);
 
-                        //kickAsManyOut();
-                        //bringAsManyBack();
-                        //cull();
                     }));
                 }else{
                     long finalOldTime2 = oldTime;
                     commandStack.push(new GenericCommand<URI>(uri, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
                         undoMagicWhichIDontUnderstand(inDisk, uri1, finalOldTime2);
-                        //kickAsManyOut();
-                       //bringAsManyBack();
-                        //cull();
                     }));
                 }            }
             trueStackSize = this.getTrueStackSize();
@@ -247,16 +234,14 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             u.setLastUseTime(Integer.MIN_VALUE);
             timeHeap.reHeapify(u);
             Document d = cull();
+            stickAtTheTopOfSRIfThere(u);
             residentsOfTheShadowRealm.pop();
             if(residentsOfTheShadowRealm.size() >0) {
                 docTree.get(residentsOfTheShadowRealm.pop().getKey()).setLastUseTime(oldTime);
             }
             stickOnBottomOfStack(new URISafonUboiTeman(d.getKey()));
             cleanUpMemory();
-        } /*else {
-        if(residentsOfTheShadowRealm.size() >0) {
-            docTree.get(residentsOfTheShadowRealm.pop().getKey());
-        }*/
+        }
     }
 
     private int getDocBytes(URISafonUboiTeman u){
@@ -581,7 +566,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 for(Document doc: list){
                     long oldTIme = doc.getLastUseTime();
                     boolean inDisk = deleteFromSRIfNeeded(new URISafonUboiTeman(d.getKey()));
-                    diskStates.put(doc.getKey(), stackCopy());
+                    //diskStates.put(doc.getKey(), stackCopy());
                     c.addCommand(new GenericCommand<URI>(doc.getKey(), (uri1) -> {
                         if(((Document)doc).getDocumentTxt() != null) {
                             if(doc.getDocumentTxt().getBytes().length > maxBytes){
@@ -594,7 +579,7 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                             throwItIntoTheTrie(doc);
                             throwIntoMetaTrie(doc);
                             undoMagicDeleteEdition(inDisk, uri1, oldTIme);
-                            residentsOfTheShadowRealm = diskStates.get(uri1);
+                           // residentsOfTheShadowRealm = diskStates.get(uri1);
                            // allignDiskWithStack();
                             cleanUpMemory();
                         } else {
@@ -624,32 +609,8 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
         return uris;
     }
 
-    private void allignDiskWithStack() {
-        Stack<URISafonUboiTeman> temp = new StackImpl<>();
-        while(residentsOfTheShadowRealm.size() > 0){
-            if(heapSet.contains(residentsOfTheShadowRealm.peek())){
-                residentsOfTheShadowRealm.peek().setLastUseTime(Integer.MIN_VALUE);
-                cull();
-            }
-            temp.push(residentsOfTheShadowRealm.pop());
-        }
-        while(temp.size() >0){
-            residentsOfTheShadowRealm.push(temp.pop());
-        }
-    }
 
-    private StackImpl<URISafonUboiTeman> stackCopy(){
-        StackImpl<URISafonUboiTeman> copy = new StackImpl<>();
-        StackImpl<URISafonUboiTeman> temp = new StackImpl<>();
-        while(residentsOfTheShadowRealm.size() > 0){
-            temp.push(residentsOfTheShadowRealm.pop());
-        }
-        while(temp.size() > 0){
-            residentsOfTheShadowRealm.push(temp.peek());
-            copy.push(temp.pop());
-        }
-        return copy;
-    }
+
     //there's a better way to do this but i also need to finish. wooo ;-;
     @Override
     public List<Document> searchByMetadata(Map<String, String> keysValues) throws IOException{
@@ -794,34 +755,6 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
                 }*/
             }
         }
-    }
-    private void removeFromUndos(Document d){
-        URI uri = d.getKey();
-        this.docTree.put(uri, null);
-        Stack<Undoable> temp = new StackImpl<>();
-        Undoable next;
-        while(commandStack.size() > 0){
-        next = commandStack.pop();
-        if(next.getClass().equals(GenericCommand.class)){
-            if (!((GenericCommand)next).getTarget().equals(uri)){
-                temp.push(next);
-            } else {
-                next.undo();
-            }
-        }
-        else {
-            ((CommandSet)next).undo(uri);
-
-           if(!((CommandSet)next).isEmpty()){
-               temp.push(next);
-        }
-        }
-        }
-        while(temp.size() > 0){
-            commandStack.push(temp.pop());
-        }
-        this.trueStackSize = getTrueStackSize();
-        this.cleanUpMemory();
     }
     @Override
     public void setMaxDocumentBytes(int limit) {
