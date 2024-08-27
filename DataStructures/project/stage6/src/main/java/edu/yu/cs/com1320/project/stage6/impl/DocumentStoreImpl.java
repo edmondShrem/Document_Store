@@ -157,6 +157,10 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     }
     @Override
     public int put(InputStream input, URI uri, DocumentStore.DocumentFormat format) throws IOException{
+        return doThePut(input, uri, format);
+    }
+
+    private int doThePut(InputStream input, URI uri, DocumentFormat format) {
         if (uri == null || uri.getPath() == null || uri.getPath().equals("") || format == null) {
             throw new IllegalArgumentException("uri is null or empty, or format is null");
         }
@@ -361,8 +365,6 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
     //i think i dealt properly with the trie?
     @Override
     public boolean delete(URI url) {
-       // DocumentImpl prev = docTree.put(url, null);
-        //this is a change
         boolean inDisk = deleteFromSRIfNeeded(new URISafonUboiTeman(url));
         DocumentImpl prev = docTree.get(url);
         long oldTime = System.nanoTime();
@@ -381,32 +383,33 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
             for(String s : prevKeys){
                 metaTrie.delete(s+"-"+oldMeta.get(s), new URISafonUboiTeman(prev.getKey()));
             }
-            //debatable
             prev.setLastUseTime(Integer.MIN_VALUE);
             heapSet.remove(this.timeHeap.remove());
-            if(prev.getDocumentTxt() != null){
-                totalBytes -= prev.getDocumentTxt().getBytes().length;
-            } else {
-                totalBytes -= prev.getDocumentBinaryData().length;
-            }
-            docTree.put(url, null);
+            if(prev.getDocumentTxt() != null){totalBytes -= prev.getDocumentTxt().getBytes().length;
+            } else {totalBytes -= prev.getDocumentBinaryData().length;
+            }docTree.put(url, null);
         }
+        makeTheUndos(url, prev, oldTime, inDisk);
+        trueStackSize = this.getTrueStackSize();
+        return prev != null;
+    }
+
+    private void makeTheUndos(URI url, DocumentImpl prev, long oldTime, boolean inDisk) {
         if (trueStackSize <= this.getTrueStackSize() && prev != null) {
             if(prev.getDocumentTxt() != null){
                 long finalOldTime = oldTime;
-                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT,prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
+                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.TXT, prev.getDocumentTxt().getBytes()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
                 undoMagicDeleteEdition(inDisk, uri1, finalOldTime);
             }));
             }else{
                 long finalOldTime1 = oldTime;
-                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY,prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
+                commandStack.push(new GenericCommand<URI>(url, (uri1) -> { this.putBasedOnFormat(uri1, DocumentFormat.BINARY, prev.getDocumentBinaryData()); if(prev.getDocumentBinaryData() != null) throwItIntoTheTrie(prev);
                     undoMagicDeleteEdition(inDisk, uri1, finalOldTime1);
                 }));
             }
         }
-        trueStackSize = this.getTrueStackSize();
-        return prev != null;
     }
+
     private void stickAtTheTopOfSRIfThere(URISafonUboiTeman u){
        if (deleteFromSRIfNeeded(u)){
            residentsOfTheShadowRealm.push(u);
@@ -440,48 +443,32 @@ public class DocumentStoreImpl implements edu.yu.cs.com1320.project.stage6.Docum
 
     @Override
     public void undo(URI url) throws IllegalStateException {
-        //long time = System.nanoTime();
-        if (commandStack.size() == 0) {
-            throw new IllegalStateException("Nothing to undo");
-        }
+        if (commandStack.size() == 0) {throw new IllegalStateException("Nothing to undo");}
         StackImpl<Undoable> temp = new StackImpl<>();
         boolean found = false;
         while (!found) {
-            //ensures that if its not found everything gets put back first before throwing, dont wanna break the system
             if (commandStack.size() == 0) {
-                while (temp.size() != 0) {
-                    commandStack.push(temp.pop());
-                }
-                throw new IllegalStateException("URI is not represented in the command stack");
-            }
-            //if its a single command check the uri, if not check if the uri is represented in the set. undo either way
+                while (temp.size() != 0) {commandStack.push(temp.pop());}
+                throw new IllegalStateException("URI is not represented in the command stack");}
             if (commandStack.peek().getClass().equals(GenericCommand.class) && ((GenericCommand<URI>)commandStack.peek()).getTarget().equals(url)){
                 commandStack.pop().undo();
                 if(docTree.get(url) != null) {
-                  //  docTree.get(url).setLastUseTime(time);
-                    timeHeap.reHeapify(new URISafonUboiTeman(url));
-                }
-                /////
+                    timeHeap.reHeapify(new URISafonUboiTeman(url));}
                 found = true;
             } else if (commandStack.peek().getClass().equals(CommandSet.class) && ((CommandSet<URI>)(commandStack.peek())).containsTarget(url)){
                 found = true;
                 ((CommandSet<URI>)(commandStack.peek())).undo(url);
                 if(docTree.get(url) != null) {
-                  //  docTree.get(url).setLastUseTime(time);
                     timeHeap.reHeapify(new URISafonUboiTeman(url));
                 }
-               ////
                 if(((CommandSet<URI>)commandStack.peek()).isEmpty()){
                     commandStack.pop();
                 }
             } else {
                 temp.push(commandStack.pop());
-            }
-        }
+            }}
         while (temp.size() > 0) {
-            commandStack.push(temp.pop());
-        }
-    }
+            commandStack.push(temp.pop());}}
 
     @Override
     public List<Document> search(String keyword) throws IOException{
