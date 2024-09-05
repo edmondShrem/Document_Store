@@ -54,12 +54,15 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
         if(map == null){
             throw new IllegalArgumentException("map can't be null");
         }
+        if (ids.contains(id)){
+            throw new IllegalArgumentException("id is already represented in the DHM");
+        }
         this.counter = 0;
         this.mapMap.put(id,map);
         this.ids.add(id);
         this.balanceADD(id);
     }
-
+    //need to look closer at this. the whole "exit b4 u blow urself up thang
     @Override
     public void removeServer(int id) {
         if (id < 0){
@@ -68,11 +71,21 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
         if (mapMap.get(id) == null){
             throw new IllegalArgumentException("Id is not represented in the Dhasmap");
         }
+        int totalStored = this.totalStored();
+        if(totalStored / (double)(this.ids.size() - 1) > this.maxServerCapacity){
+            throw new IllegalArgumentException("There is not enough room to redistribute the contents of that particular server");
+        }
         this.counter = 0;
         this.balanceDELETE(id);
-        mapMap.remove(id);
+        this.mapMap.remove(id);
     }
-
+    private int totalStored(){
+        int total = 0;
+        for(int eyeDee : this.ids){
+            total += this.mapMap.get(eyeDee).size();
+        }
+        return total;
+    }
     private void balanceADD(int id) {
         Set<Entry<Key, Value>> relocate;
         for (int eyeDee : ids) {
@@ -80,13 +93,14 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
                 continue;
             }
             HashMap<Key, Value> map = mapMap.get(eyeDee);
-            relocate = map.entrySet();
+            relocate = new HashSet<>(map.entrySet());
             int amtToSend = relocate.size()/ ids.size();
             int totalSent = 0;
             for(Entry<Key, Value> e : relocate){
                 if(!map.isEmpty() && totalSent < amtToSend){
                     this.mapMap.get(id).put(e.getKey(),e.getValue());
                     map.remove(e.getKey());
+                    totalSent++;
                 }
             }
         }
@@ -97,7 +111,17 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
     private void balanceDELETE(int id){
         Set<Entry<Key,Value>> relocate = mapMap.get(id).entrySet();
         this.ids.remove((Object)id);
+        int allowedErrors = this.ids.size();
+        int totalErrors = 0;
         for (Entry<Key,Value> e : relocate){
+            while(this.mapMap.get(ids.get(counter)).size() == this.maxServerCapacity){
+                totalErrors++;
+                this.advanceCounter();
+                //under normal circumstances we should NEVER get here. this is a failsafe to prevent the code from exploding
+                if (totalErrors == allowedErrors){
+                    return;
+                }
+            }
             this.mapMap.get(ids.get(counter)).put(e.getKey(), e.getValue());
             this.advanceCounter();
         }
@@ -108,22 +132,37 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
         if (key == null) {
             throw new IllegalArgumentException("key can't be null");
         }
+        if (ids.isEmpty()){
+            throw new IllegalStateException("There are no servers. Add some to add data");
+        }
+        int idIfHere = -1;
         Value result;
         int exceptionCounter = 0;
-        while (exceptionCounter < mapMap.size()) {
-            if (mapMap.get(ids.get(counter)).size() >= maxServerCapacity) {
-                exceptionCounter++;
-                this.advanceCounter();
-            } else {
-                result = mapMap.get(ids.get(counter)).put(key,value);
-                this.advanceCounter();
-                return result;
+        for(int eyeDee:ids){
+            result = mapMap.get(eyeDee).get(key);
+            if (result != null){
+                idIfHere = eyeDee;
             }
         }
-        if (exceptionCounter == mapMap.size()){
-            throw new OutOfMemoryError("no room");
+        //bro just catch the error, dib
+        if(idIfHere == -1) {
+            while (exceptionCounter < mapMap.size()) {
+                if (mapMap.get(ids.get(counter)).size() >= maxServerCapacity) {
+                    exceptionCounter++;
+                    this.advanceCounter();
+                } else {
+                    result = mapMap.get(ids.get(counter)).put(key, value);
+                    this.advanceCounter();
+                    return result;
+                }
+            }
+            if (exceptionCounter == mapMap.size()) {
+                throw new IllegalArgumentException("no room");
+            }
+            return null;
+        } else {
+            return mapMap.get(idIfHere).put(key,value);
         }
-        return null;
     }
     @Override
     public Value get(Object key) {
