@@ -142,27 +142,24 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
             result = mapMap.get(eyeDee).get(key);
             if (result != null){
                 idIfHere = eyeDee;
+                return mapMap.get(idIfHere).put(key,value);
             }
         }
         //bro just catch the error, dib
-        if(idIfHere == -1) {
-            while (exceptionCounter < mapMap.size()) {
-                if (mapMap.get(ids.get(counter)).size() >= maxServerCapacity) {
-                    exceptionCounter++;
-                    this.advanceCounter();
-                } else {
-                    result = mapMap.get(ids.get(counter)).put(key, value);
-                    this.advanceCounter();
-                    return result;
-                }
+        while (exceptionCounter < mapMap.size()) {
+            if (mapMap.get(ids.get(counter)).size() >= maxServerCapacity) {
+                exceptionCounter++;
+                this.advanceCounter();
+            } else {
+                result = mapMap.get(ids.get(counter)).put(key, value);
+                this.advanceCounter();
+                return result;
             }
-            if (exceptionCounter == mapMap.size()) {
-                throw new IllegalArgumentException("no room");
-            }
-            return null;
-        } else {
-            return mapMap.get(idIfHere).put(key,value);
         }
+        if (exceptionCounter == mapMap.size()) {
+            throw new IllegalArgumentException("no room");
+        }
+        return null;
     }
     @Override
     public Value get(Object key) {

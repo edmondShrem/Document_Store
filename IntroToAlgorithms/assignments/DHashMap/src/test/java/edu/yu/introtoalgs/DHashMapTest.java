@@ -204,9 +204,15 @@ public class DHashMapTest {
     }
     @Test
     void thousandPutsThenGets(){
-        DHashMap<Integer, Integer> boi = new DHashMap<>(10);
-        for(int i = 0; i < 100; i++){
-            boi.addServer(i, new SizedHashMap<>(10));
+        DHashMap<Integer, Integer> boi = new DHashMap<>(100);
+        for(int i = 0; i < 10; i++){
+            boi.addServer(i, new SizedHashMap<>(100));
+        }
+        for(int i = 0; i < 1000; i ++){
+            boi.put(i,i);
+        }
+        for(int i = 0; i < 10; i++){
+            boi.addServer(i+100, new SizedHashMap<>(100));
         }
         for(int i = 0; i < 1000; i ++){
             boi.put(i,i);
@@ -218,19 +224,20 @@ public class DHashMapTest {
 
     @Test
     void thousandPutsThenGetsButIDeleteSomeExtraServers(){
-        DHashMap<Integer, Integer> boi = new DHashMap<>(10);
-        for(int i = 0; i < 1000; i++){
-            boi.addServer(i, new SizedHashMap<>(10));
+        DHashMap<Integer, Integer> boi = new DHashMap<>(100);
+        for(int i = 0; i < 100; i++){
+            boi.addServer(i, new SizedHashMap<>(100));
         }
         for(int i = 0; i < 1000; i ++){
             boi.put(i,i);
         }
-        boi.removeServer(500);
-        boi.removeServer(600);
+        boi.removeServer(50);
+        boi.removeServer(60);
         for(int i = 0; i < 1000; i++){
             assertEquals(i, boi.get(i));
         }
     }
+    @Test
     void lotsOfInputButIAddServersInTheMiddle(){
         DHashMap<Integer, Integer> boi = new DHashMap<>(10);
         for(int i = 0; i < 1000; i++){
@@ -247,6 +254,7 @@ public class DHashMapTest {
             assertEquals(i, boi.get(i));
         }
     }
+
     @Test
     void removingAServerButTheresNoRoom(){
         DHashMap<Integer, Integer> boi = new DHashMap<>(10);
@@ -262,4 +270,15 @@ public class DHashMapTest {
         );
 
     }
+    @Test
+    void lotsOfPuts(){
+        DHashMap<Integer, Integer> boi = new DHashMap<>(100);
+        for(int i = 0; i < 100; i++){
+            boi.addServer(i, new SizedHashMap<>(100));
+        }
+        for(int i = 0; i < 4000; i ++){
+            boi.put(i,i);
+        }
+    }
+
 }
