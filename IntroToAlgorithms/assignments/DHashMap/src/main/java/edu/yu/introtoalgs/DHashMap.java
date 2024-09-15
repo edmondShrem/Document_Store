@@ -126,7 +126,7 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
             this.advanceCounter();
         }
     }
-//maybe add some balance to put and remove?
+    //maybe add some balance to put and remove?
     @Override
     public Value put(Key key, Value value) {
         if (key == null) {
@@ -167,13 +167,13 @@ public class DHashMap<Key, Value> extends DHashMapBase<Key, Value>{
             throw new IllegalArgumentException("key can't be null");
         }
         Value result;
-         for(int eyeDee:ids){
-             result = mapMap.get(eyeDee).get(key);
-             if (result != null){
-                 return result;
-             }
-         }
-         return null;
+        for(int eyeDee:ids){
+            result = mapMap.get(eyeDee).get(key);
+            if (result != null){
+                return result;
+            }
+        }
+        return null;
     }
 
     @Override
