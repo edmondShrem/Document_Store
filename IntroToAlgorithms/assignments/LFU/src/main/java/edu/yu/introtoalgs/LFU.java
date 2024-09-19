@@ -1,18 +1,20 @@
 package edu.yu.introtoalgs;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.PriorityQueue;
+import java.util.*;
 
 public class LFU<Key, Value> extends LFUBase<Key, Value> {
 //POOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM
     //POOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM
     private final int maxSize;
-    private boolean isFull;
-    private PriorityQueue<Object[]> usageHeap;
-    //the arrays are set as follows: 0 = number of accesses. 1 = Key. 2 = Value
+    //private PriorityQueue<Object[]> usageHeap;
+    private HashMap<Integer, HashMap<Key, Object[]>> usageMap;
+    private int lowestUsage;
+    private Key lowKey;
+    //the arrays are set as follows: 0 = number of accesses. 1 = Key 2 = Value
     private HashMap<Key, Object[]> dataMap;
+    private final int ACCESSES = 0;
+    private final int KEY = 1;
+    private final int VALUE = 2;
     /**
      * Constructor: supplies the maximum size of the cache: when the cache is
      * full, the LFU eviction policy MUST be used to select a cache entry to swap
@@ -28,43 +30,94 @@ public class LFU<Key, Value> extends LFUBase<Key, Value> {
             throw new IllegalArgumentException("Max Size cannot be less than one");
         }
         this.maxSize = maxSize;
-        this.isFull = false;
-        //is this a good idea?
-        this.usageHeap = new PriorityQueue<>(new entryComparator());
+        this.lowestUsage = 0;
+        this.lowKey = null;
+        this.usageMap = new HashMap<>();
         this.dataMap = new HashMap<>();
     }
     @Override
     public boolean set(Key key, Value value) {
+        if (key == null || value == null){
+            throw new IllegalArgumentException("Args cannot be null");
+        }
         boolean isThere = this.dataMap.get(key) != null;
+        boolean wereFull = this.size() == this.maxSize;
+        if (isThere){
+            Object[] arr = this.dataMap.get(key);
+            arr[VALUE] = value;
+            arr[ACCESSES] = (Integer) arr[ACCESSES] + 1;
+            this.updateUsageMap(arr);
 
-        return false;
+        } else {
+            if (wereFull){
+                Object[] toKish = this.usageMap.get(lowestUsage).remove(lowKey);
+                this.dataMap.remove(toKish[KEY]);
+            }
+            Object[] newKidInTown = {1,key,value};
+            this.dataMap.put(key, newKidInTown);
+            this.updateUsageMap(newKidInTown);
+        }
+        return isThere;
     }
-
+    private void updateUsageMap(Object[] arr){
+        boolean alreadyThere = usageMap.get(arr[ACCESSES]) != null;
+        if(!alreadyThere) {
+            this.usageMap.put((Integer) arr[ACCESSES], new HashMap<>());
+        }
+        usageMap.get(arr[ACCESSES]).put((Key)arr[KEY],arr);
+        if((int)arr[ACCESSES] == 1){
+            this.lowestUsage = 1;
+            this.lowKey = (Key)arr[KEY];
+        } else {
+        this.usageMap.get((int)arr[ACCESSES] - 1).remove((Key)arr[KEY]);
+        //if its empty ==> (if lowest was that, increase lowest. else, do nothing.) else pick a new key
+        if(this.usageMap.get((int)arr[ACCESSES] - 1).isEmpty()){
+            if((int)arr[ACCESSES] - 1 == lowestUsage) {
+                this.lowestUsage++;
+                this.lowKey = (Key) arr[KEY];
+            }
+        } else if (lowestUsage == (int)arr[ACCESSES] - 1){
+            for (Key k : usageMap.get((Integer) arr[ACCESSES] - 1).keySet()) {
+                this.lowKey = k;
+                break;
+            }
+        }
+        }
+    }
     @Override
     public Optional<Value> get(Key key) {
-        return Optional.empty();
-    }
+        //make sure abt this one
+        if(key == null){
+            throw new IllegalArgumentException("key cannot be null");
+        }
+        Object[] bob = this.dataMap.get(key);
+        Optional<Value> result;
+        if(bob != null){
+            result = Optional.ofNullable((Value)bob[VALUE]);
+        } else {
+            result = Optional.empty();
+        }
+        if (result.isPresent()) {
+            Object[] arr = this.dataMap.get(key);
+            arr[ACCESSES] = (Integer) arr[ACCESSES] + 1;
+            this.updateUsageMap(arr);
+        }
+        return result;
 
+    }
     @Override
     public int size() {
-        return 0;
+        return dataMap.size();
     }
-
     @Override
     public boolean isEmpty() {
-        return false;
+        return this.size() == 0;
     }
-
     @Override
     public void clear() {
-
-    }
-
-    static class entryComparator implements Comparator<Object[]> {
-        @Override
-        public int compare(Object[] o1, Object[] o2) {
-            //returns a negative number if o1 is lower priority, positive it is higher, and zero if equal
-            return (int)o2[0] - (int)o1[0];
-        }
+        this.usageMap = new HashMap<>();
+        this.dataMap = new HashMap<>();
+        this.lowestUsage = 0;
+        this.lowKey = null;
     }
 }
