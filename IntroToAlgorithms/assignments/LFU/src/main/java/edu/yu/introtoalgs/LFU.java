@@ -60,24 +60,28 @@ public class LFU<Key, Value> extends LFUBase<Key, Value> {
         return isThere;
     }
     private void updateUsageMap(Object[] arr){
-        boolean alreadyThere = usageMap.get(arr[ACCESSES]) != null;
+        int accesses = (Integer) arr[ACCESSES];
+        boolean alreadyThere = usageMap.get(accesses) != null;
         if(!alreadyThere) {
-            this.usageMap.put((Integer) arr[ACCESSES], new HashMap<>());
+            this.usageMap.put(accesses, new HashMap<>());
         }
-        usageMap.get(arr[ACCESSES]).put((Key)arr[KEY],arr);
-        if((int)arr[ACCESSES] == 1){
+        Key keey = (Key) arr[KEY];
+        usageMap.get(accesses).put(keey,arr);
+        if((int) accesses == 1){
             this.lowestUsage = 1;
-            this.lowKey = (Key)arr[KEY];
+            this.lowKey = keey;
+
         } else {
-        this.usageMap.get((int)arr[ACCESSES] - 1).remove((Key)arr[KEY]);
+        this.usageMap.get(accesses - 1).remove(keey);
         //if its empty ==> (if lowest was that, increase lowest. else, do nothing.) else pick a new key
-        if(this.usageMap.get((int)arr[ACCESSES] - 1).isEmpty()){
-            if((int)arr[ACCESSES] - 1 == lowestUsage) {
+        if(this.usageMap.get( accesses - 1).isEmpty()){
+            if( accesses - 1 == lowestUsage) {
                 this.lowestUsage++;
-                this.lowKey = (Key) arr[KEY];
+                this.lowKey = keey;
+
             }
-        } else if (lowestUsage == (int)arr[ACCESSES] - 1){
-            for (Key k : usageMap.get((Integer) arr[ACCESSES] - 1).keySet()) {
+        } else if (lowestUsage ==  accesses - 1){
+            for (Key k : usageMap.get( accesses - 1).keySet()) {
                 this.lowKey = k;
                 break;
             }

@@ -192,4 +192,11 @@ public class LFUTest {
         cache.get(10);
         assertTrue(cache.get(5).isEmpty());
     }
+    @Test
+    void lottaSets(){
+        LFU<Integer, Integer> p = new LFU<>(100);
+        for(int i = 0; i < 32000000; i++){
+            p.set(i,i);
+        }
+    }
 }
