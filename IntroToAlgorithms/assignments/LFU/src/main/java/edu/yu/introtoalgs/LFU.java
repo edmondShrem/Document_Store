@@ -78,7 +78,7 @@ public class LFU<Key, Value> extends LFUBase<Key, Value> {
             if( accesses - 1 == lowestUsage) {
                 this.lowestUsage++;
                 this.lowKey = keey;
-
+                this.usageMap.remove(accesses - 1);
             }
         } else if (lowestUsage ==  accesses - 1){
             for (Key k : usageMap.get( accesses - 1).keySet()) {

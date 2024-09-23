@@ -24,7 +24,7 @@ public abstract class LFUBase <Key, Value>{
    * @param maxSize maximum size of the cache, must be greater than 0.
    * @throws IllegalArgumentException as appropriate.
    * @see #set
-  */
+   */
   public LFUBase(int maxSize) { }
 
   /** Caches the value, associating it with the key.  If the key is currently
@@ -67,4 +67,4 @@ public abstract class LFUBase <Key, Value>{
    */
   public abstract void clear();
 
-} // abstract base class  
+} // abstract base class
