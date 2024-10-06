@@ -202,9 +202,10 @@ public class LFUTest {
     @Test
     void whyDoIDoThisToMySelf(){
         LFU<Integer, Integer> p = new LFU<>(32000000);
-        p.set(1,1);
+
         for(int i = 0; i < 32000000; i++){
-            p.get(1);
+            p.set(i,i);
         }
     }
+
 }

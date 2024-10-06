@@ -15,16 +15,17 @@ public class TerrorTests {
     void doesItWork(){
         TerroristNames t = new TerroristNames();
         t.add("fartfart");
-        assertEquals(1,t.search("f"));
-        assertEquals(1,t.search("a"));
-        assertEquals(1,t.search("r"));
-        assertEquals(1,t.search("t"));
-        assertEquals(1,t.search("fa"));
-        assertEquals(1,t.search("ar"));
-        assertEquals(1,t.search("rt"));
-        assertEquals(1,t.search("far"));
-        assertEquals(1,t.search("art"));
-        assertEquals(1,t.search("fart"));
+        t.add("fart");
+        assertEquals(2,t.search("f"));
+        assertEquals(2,t.search("a"));
+        assertEquals(2,t.search("r"));
+        assertEquals(2,t.search("t"));
+        assertEquals(2,t.search("fa"));
+        assertEquals(2,t.search("ar"));
+        assertEquals(2,t.search("rt"));
+        assertEquals(2,t.search("far"));
+        assertEquals(2,t.search("art"));
+        assertEquals(2,t.search("fart"));
     }
     @Test
     void lottaExceptions(){
@@ -33,8 +34,11 @@ public class TerrorTests {
     @Test
     void lottaAdds(){
         TerroristNames t = new TerroristNames();
-        for(int i = 1000000; i < 2000000; i ++){
-            t.add(i + "");
+        for(int i = 0; i < 500000; i ++){
+            t.add("ab" + i);
+        }
+        for(int i = 0; i < 1000000; i ++){
+            t.search("ab" + i);
         }
     }
 }
