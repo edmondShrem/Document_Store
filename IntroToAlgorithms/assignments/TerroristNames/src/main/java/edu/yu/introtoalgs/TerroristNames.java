@@ -23,12 +23,21 @@ public class TerroristNames extends TerroristNamesBase{
             throw new IllegalArgumentException("already here");
         } else if(id.isEmpty()){
             throw new IllegalArgumentException("id can't be empty");
-        } else if(id.contains(" ")){
+        } else if(containsWhite(id)){
             throw new IllegalArgumentException("can't contain spaces");
         } else if (id.length() > MAX_ID_LENGTH){
             throw new IllegalArgumentException("id can't be that long");
         }
         this.cutItUp(id);
+    }
+    private boolean containsWhite(String s){
+        boolean isThere = false;
+        for(char c:s.toCharArray()){
+            if(Character.isWhitespace(c)){
+                isThere = true;
+            }
+        }
+        return isThere;
     }
     private void cutItUp(String s){
         HashSet<String> added = new HashSet<>();
@@ -46,8 +55,8 @@ public class TerroristNames extends TerroristNamesBase{
     @Override
     public int search(String id) {
         //whitespace include Tab?
-        if(id == null || id.isEmpty() ||id.contains(" ") || id.length() > MAX_ID_LENGTH){
-            throw new IllegalArgumentException("ya broke the rules");
+        if(id == null || id.isEmpty() ||containsWhite(id) || id.length() > MAX_ID_LENGTH){
+            throw new IllegalArgumentException("ya broke da rules");
         }
         Integer i = membersSub.get(id);
         return Objects.requireNonNullElse(i, 0);
