@@ -1,7 +1,6 @@
 package edu.yu.introtoalgs;
 
 import java.util.*;
-import java.util.jar.JarEntry;
 
 public class TerroristNames extends TerroristNamesBase{
     //the idea:::hold all of the 2 char sequences, which sends you to a set containing all the words with those in them. then call contains on  a small set of those? saves time potentially???? ur gonna run outta heap spae again -_-
