@@ -28,6 +28,15 @@ public class TerrorTests {
         assertEquals(2,t.search("fart"));
     }
     @Test
+    void bohl(){
+        TerroristNames t = new TerroristNames();
+        for(int i = 100; i < 200; i++){
+            t.add(i+"");
+        }
+        assertEquals(100, t.search(1+""));
+        assertEquals(0, t.search("fart"));
+    }
+    @Test
     void lottaExceptions(){
         //later
     }
