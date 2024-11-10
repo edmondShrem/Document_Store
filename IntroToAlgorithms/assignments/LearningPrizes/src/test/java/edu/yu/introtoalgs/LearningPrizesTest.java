@@ -49,14 +49,16 @@ public class LearningPrizesTest {
     }
     @Test
     void slowTest(){
+        Iterator<Double> p;
         for(int i = 1; i < 65000; i ++){
             lp.addTicket(i,i,i);
-            lp.addTicket(i,i+1,i+3);
-            lp.addTicket(i,i+2,i+5);
-        }
-        Iterator<Double> p = lp.awardedPrizeMoney();
-        while(p.hasNext()){
-            p.next();
+            if (i % 2 == 0) {
+                p = lp.awardedPrizeMoney();
+                while(p.hasNext()){
+                    p.next();
+                }
+            }
         }
     }
+
 }
