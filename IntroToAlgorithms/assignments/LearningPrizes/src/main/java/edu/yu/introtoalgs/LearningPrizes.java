@@ -39,8 +39,12 @@ public class LearningPrizes extends LearningPrizesBase{
         if(!this.daysToTicket.containsKey(day)){
             //this mean we are on a new day, check to see if we can get some new munee (unclear abt zero/1 ticket for a spec day
             if(this.totalTickets >= 2){
+                while(currentDay < day && this.totalTickets >= 2){
+                    this.prizes.add(this.getNewPrize());
+                    currentDay++;
+                }
                 //get the prize
-                this.prizes.add(this.getNewPrize());
+                //this.prizes.add(this.getNewPrize());
             }
             this.currentDay = day;
             this.daysToTicket.put(this.currentDay, new HashSet<>());

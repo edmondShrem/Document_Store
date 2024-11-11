@@ -60,5 +60,30 @@ public class LearningPrizesTest {
             }
         }
     }
+    @Test
+    void wumboTest(){
+        Iterator<Double> p;
+        lp.addTicket(1,1,1);
+        lp.addTicket(1,2,1);
+        lp.addTicket(1,3,1);
+        lp.addTicket(1,4,1);
+        lp.addTicket(1,5,1);
+        lp.addTicket(1,14,1);
+        lp.addTicket(1,24,1);
+        lp.addTicket(1,34,1);
+        lp.addTicket(1,44,1);
+        lp.addTicket(1,54,1);
+        lp.addTicket(2,64,1);
+        lp.addTicket(3,74,1);
+        lp.addTicket(100,1,1);
+        p = lp.awardedPrizeMoney();
+        p.next();
+        p.next();
+        p.next();
+        p.next();
+        p.next();
+        assertTrue(p.hasNext());
+
+    }
 
 }
