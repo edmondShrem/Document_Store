@@ -1,5 +1,6 @@
 package edu.yu.introtoalgs;
 
+import java.util.Arrays;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 
@@ -11,7 +12,7 @@ public class MatrixAddFJ extends MatrixAddFJBase {
     public MatrixAddFJ(int addThreshold) {
         super(addThreshold);
         if (addThreshold <= 0) {
-            throw new IllegalArgumentException("Threshold must be greater than 0!");
+            throw new IllegalArgumentException("Threshold must be greater than 0 silly!");
         }
         this.threshold = addThreshold;
 
@@ -24,7 +25,7 @@ public class MatrixAddFJ extends MatrixAddFJBase {
 
         if (n <= threshold) {
             // Use serial computation for small matrices
-            serialCompute(a, b, result, 0, 0, n, n);
+            serialCompute(a, b, result, n, n);
         } else {
 
             pool.invoke(new MatrixAddTask(a, b, result, 0, 0, n, n, threshold));
@@ -33,15 +34,15 @@ public class MatrixAddFJ extends MatrixAddFJBase {
         return result;
     }
 
-    private void serialCompute(double[][] a, double[][] b, double[][] result, int rowStart, int colStart, int rowEnd, int colEnd) {
-        for (int i = rowStart; i < rowEnd; i++) {
-            for (int j = colStart; j < colEnd; j++) {
+    private void serialCompute(double[][] a, double[][] b, double[][] result, int rowEnd, int colEnd) {
+        for (int i = 0; i < rowEnd; i++) {
+            for (int j = 0; j < colEnd; j++) {
                 result[i][j] = a[i][j] + b[i][j];
             }
         }
     }
-
-    private class MatrixAddTask extends RecursiveAction {
+//copy one of the arrays and add to it; few acceses?
+    private static class MatrixAddTask extends RecursiveAction {
         private final double[][] a;
         private final double[][] b;
         private final double[][] result;
@@ -63,12 +64,17 @@ public class MatrixAddFJ extends MatrixAddFJBase {
         protected void compute() {
             int numRows = rowEnd - rowStart;
             int numCols = colEnd - colStart;
-
+            double[] resultI;
+            double[] aI;
+            double[] bI;
             if (numRows <= threshold && numCols <= threshold) {
                 // Perform serial computation
                 for (int i = rowStart; i < rowEnd; i++) {
+                     resultI = result[i];
+                     aI = a[i];
+                     bI = b[i];
                     for (int j = colStart; j < colEnd; j++) {
-                        result[i][j] = a[i][j] + b[i][j];
+                        resultI[j] = aI[j] + bI[j];
                     }
                 }
             } else {
@@ -81,7 +87,6 @@ public class MatrixAddFJ extends MatrixAddFJBase {
                         new MatrixAddTask(a, b, result, rowStart, colMid, rowMid, colEnd, threshold),  // Top-right
                         new MatrixAddTask(a, b, result, rowMid, colStart, rowEnd, colMid, threshold),  // Bottom-left
                         new MatrixAddTask(a, b, result, rowMid, colMid, rowEnd, colEnd, threshold)    // Bottom-right
-
                 );
             }
         }

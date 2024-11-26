@@ -45,7 +45,7 @@ public class matTest {
     void speeeeed(){
         double[][] a = give(8192);
         MatrixAddFJ serial = new MatrixAddFJ(1342567);
-        MatrixAddFJ fork = new MatrixAddFJ(2000);
+        MatrixAddFJ fork = new MatrixAddFJ(2047);
         long serialsec = 0;
         long forksec = 0;
         long startTime;
