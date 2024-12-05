@@ -24,7 +24,6 @@ public class MatrixAddFJ extends MatrixAddFJBase {
         double[][] result = new double[n][n];
 
         if (n <= threshold) {
-            // Use serial computation for small matrices
             serialCompute(a, b, result, n, n);
         } else {
 
@@ -68,7 +67,6 @@ public class MatrixAddFJ extends MatrixAddFJBase {
             double[] aI;
             double[] bI;
             if (numRows <= threshold && numCols <= threshold) {
-                // Perform serial computation
                 for (int i = rowStart; i < rowEnd; i++) {
                      resultI = result[i];
                      aI = a[i];
@@ -78,7 +76,6 @@ public class MatrixAddFJ extends MatrixAddFJBase {
                     }
                 }
             } else {
-                // Split into quadrants
                 int rowMid = rowStart + numRows / 2;
                 int colMid = colStart + numCols / 2;
 
