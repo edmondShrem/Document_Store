@@ -37,7 +37,7 @@ public class MultimediaConversion extends MultimediaConversionBase{
      */
     @Override
     public void add(String format1, String format2, double duration) {
-        if(duration < 0 || format1 == null || format1.isEmpty() || format2 == null || format2.isEmpty()){
+        if(duration < 0 || format1 == null || format1.isEmpty() || format2 == null || format2.isEmpty() || format2.equals(format1)){
             throw new IllegalArgumentException("Ya passed illegal arguments you silly silly boi");
         }
         graph.putIfAbsent(format1, new HashSet<>());
@@ -134,7 +134,7 @@ public class MultimediaConversion extends MultimediaConversionBase{
     }
 
 
-    private class Edge implements Comparable<Edge>{
+    private class Edge{
        private  String src;
         private String dst;
         private double weight;
@@ -154,17 +154,14 @@ public class MultimediaConversion extends MultimediaConversionBase{
             return dst;
         }
 
-        @Override
-        public int compareTo(Edge o) {
-            return Double.compare(this.weight, o.getWeight());
-        }
+
         @Override
         public boolean equals(Object o){
             return (this.one().equals(((Edge) o).one()) || this.one().equals(((Edge) o).other())) && (this.other().equals(((Edge) o).one()) || this.other().equals(((Edge) o).other()));
         }
         @Override
         public int hashCode(){
-            return Objects.hash(src,dst,weight);
+            return Objects.hash(src,dst);
         }
     }
 

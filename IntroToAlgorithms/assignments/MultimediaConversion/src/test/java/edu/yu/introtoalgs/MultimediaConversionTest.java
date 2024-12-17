@@ -60,25 +60,25 @@ public class MultimediaConversionTest {
         System.out.println(total);
 
         }
-    @Test
-    void tooBigInCase(){
-        MultimediaConversion m = new MultimediaConversion("1");
-        int total = 0;
-        long l = System.currentTimeMillis();
-        for(int s = 0; s < 4000; s++){
-            for(int i = s; i < 4000; i++){
-                try {
-                    m.add(s + "",i + "",Math.random());
-                    total++;
-                } catch (Exception e) {
-                }
-            }
-
-        }
-        Map<String, Double> h = m.convert("12", "32");
-        System.out.println(System.currentTimeMillis() - l);
-        System.out.println(total);
-    }
+//    @Test
+//    void tooBigInCase(){
+//        MultimediaConversion m = new MultimediaConversion("1");
+//        int total = 0;
+//        long l = System.currentTimeMillis();
+//        for(int s = 0; s < 4000; s++){
+//            for(int i = s; i < 4000; i++){
+//                try {
+//                    m.add(s + "",i + "",Math.random());
+//                    total++;
+//                } catch (Exception e) {
+//                }
+//            }
+//
+//        }
+//        Map<String, Double> h = m.convert("12", "32");
+//        System.out.println(System.currentTimeMillis() - l);
+//        System.out.println(total);
+//    }
 
     @Test
     void maxNodes(){
@@ -95,6 +95,37 @@ public class MultimediaConversionTest {
         Map<String, Double> h = m.convert("400");
         System.out.println(total);
 
+        }
+        @Test
+        void badness(){
+            assertThrows(IllegalArgumentException.class, () -> {
+                new MultimediaConversion((""));
+            });
+            MultimediaConversion m = new MultimediaConversion("a");
+            assertThrows(IllegalArgumentException.class, () -> {
+                m.add("b","b",420);
+            });
+            assertThrows(IllegalArgumentException.class, () -> {
+                m.add("","b",420);
+            });assertThrows(IllegalArgumentException.class, () -> {
+                m.add("b","",420);
+            });
+            assertThrows(IllegalArgumentException.class, () -> {
+                m.add("a","b",-420);
+            });
+            m.add("a","b",12);
+            assertThrows(IllegalArgumentException.class, () -> {
+                m.add("a","b",420);
+            });
+            assertThrows(IllegalArgumentException.class, () -> {
+                m.convert("a");
+            });
+            assertThrows(IllegalArgumentException.class, () -> {
+                m.convert("b","c");
+            });
+            assertThrows(IllegalArgumentException.class, () -> {
+                m.convert("b","b");
+            });
         }
 
     }
