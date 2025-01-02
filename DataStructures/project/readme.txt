@@ -1,0 +1,1 @@
+A document store/search engine, written in Java. Uses various data structures to store documents in memory and the file system, managing memory usage between the two locations and supporting basic CRUD operations
